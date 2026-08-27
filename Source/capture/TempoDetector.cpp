@@ -259,7 +259,28 @@ TempoResult TempoDetector::detect (const juce::AudioBuffer<float>& audio, double
     bestLag = chosenLag;
 
     const double mean = sum / counted;
-    result.bpm = 60.0 * frameRate / bestLag;
+
+    // Lags are whole envelope frames, and up at 150 BPM consecutive lags are
+    // about 4 BPM apart - so an exactly-150 track can only ever report 148 or
+    // 152. Interpolating the correlation peak parabolically recovers the
+    // fraction between them and gets the reported tempo inside 1 BPM, which
+    // matters because this number is what bar lengths are computed from.
+    double refinedLag = bestLag;
+    if (bestLag > minLag && bestLag < maxLag)
+    {
+        const double cPrev = correlation[(size_t) (bestLag - 1)];
+        const double cHere = correlation[(size_t) bestLag];
+        const double cNext = correlation[(size_t) (bestLag + 1)];
+        const double denom = cPrev - 2.0 * cHere + cNext;
+        if (std::abs (denom) > 1.0e-12)
+        {
+            const double delta = 0.5 * (cPrev - cNext) / denom;
+            if (std::abs (delta) <= 0.5)
+                refinedLag = bestLag + delta;
+        }
+    }
+
+    result.bpm = 60.0 * frameRate / refinedLag;
 
     // An absolute floor as well as a relative one. `best` is the correlation
     // as a fraction of the envelope's own energy, so it is meaningful on its
