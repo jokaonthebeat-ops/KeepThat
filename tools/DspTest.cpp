@@ -565,6 +565,65 @@ static void testUndoHistory()
 // -----------------------------------------------------------------------------
 //  7. The rolling buffer
 // -----------------------------------------------------------------------------
+static void testBufferClear()
+{
+    std::printf ("\nbuffer clear\n");
+
+    RollingBuffer ring;
+    ring.prepare (kRate, 2, 2.0);
+
+    juce::AudioBuffer<float> block (2, 512);
+    auto fill = [&block] (float v)
+    {
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < 512; ++i)
+                block.getWritePointer (ch)[i] = v;
+    };
+
+    fill (0.5f);
+    for (int b = 0; b < 60; ++b)
+        ring.write (block);
+
+    const double before = ring.availableSeconds();
+    check (before > 0.5, "buffer has history before the clear");
+
+    // A clear asked for from the interface must not take effect until the
+    // AUDIO thread acts on it - that is what makes it race-free.
+    ring.requestClear();
+    checkNear (ring.availableSeconds(), before, 1.0e-9,
+               "requestClear alone changes nothing - the audio thread owns the indices");
+
+    fill (0.25f);
+    ring.write (block);
+    checkNear (ring.availableSeconds(), 512.0 / kRate, 0.001,
+               "after the next block the buffer holds only what arrived since the clear");
+
+    // Everything written after the clear must survive the progressive wipe,
+    // which is the part that could plausibly eat live audio.
+    for (int b = 0; b < 40; ++b)
+        ring.write (block);
+
+    juce::AudioBuffer<float> out;
+    const int got = ring.readLast (0.4, out);
+    check (got > 0, "the buffer reads back after a clear");
+    bool intact = true;
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < got; ++i)
+            if (std::abs (out.getReadPointer (ch)[i] - 0.25f) > 1.0e-6f)
+                intact = false;
+    check (intact, "the wipe never touches audio written after the clear");
+
+    // And it must actually finish rather than run for ever.
+    for (int b = 0; b < 400 && ring.isWiping(); ++b)
+        ring.write (block);
+    check (! ring.isWiping(), "the progressive wipe completes");
+
+    // A fresh prepare must not leave the wipe armed over an already-blank ring.
+    RollingBuffer fresh;
+    fresh.prepare (kRate, 2, 2.0);
+    check (! fresh.isWiping(), "prepare does not arm a pointless wipe");
+}
+
 static void testRollingBuffer()
 {
     std::printf ("\nrolling buffer\n");
@@ -863,6 +922,7 @@ int main()
     testClipLoader();
     testUndoHistory();
     testRollingBuffer();
+    testBufferClear();
     testExport();
     testProcessorCapture();
     testEveryButtonIsWired();

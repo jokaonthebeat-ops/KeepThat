@@ -1,0 +1,46 @@
+=== SHORT (one line, <=140 chars) ===
+KEEP THAT! is always listening. Play something great with the recorder off,
+press one button, and pull the last 8 bars straight back.
+
+=== MEDIUM (store card, ~60 words) ===
+Always-on idea capture. KEEP THAT! holds a rolling eight minutes of everything
+going through it, so the take you didn't record isn't gone. Recover the last
+bars, seconds or musical phrase - trimmed, faded, key-labelled and ready to
+drag into your project. Nothing to arm, no added latency, and the buffer
+restarts each time you keep something. Free. VST3/AU/Standalone, macOS
+universal + Windows.
+
+=== LONG (product page) ===
+Use Marketing/SALES-PAGE.md.
+
+=== FEATURE BULLETS ===
+- Rolling buffer up to 8 minutes - always capturing, nothing to arm
+- Recover 1/2/4/8 bars (host tempo), 15/30/60 seconds, or the last PHRASE
+- Phrase detection finds where the idea actually started
+- Auto trim, silence detect, zero-crossing snap, fades, normalise - applied
+  as the capture is made
+- Key detection (chroma + Krumhansl-Kessler) and tempo estimation when the
+  host reports none
+- Buffer restarts after each KEEP, so the clock reads time since your last idea
+- 100 recent keeps with thumbnails, rename, favourite - and undo that never
+  deletes the file
+- Drag straight to your DAW, or 24-bit WAV to folder / sampler / desktop /
+  playlist with .m3u
+- Zero added latency; audio thread never allocates, locks or hits the disk
+- No network, no telemetry, no account
+- VST3 + AU + Standalone, macOS 11+ universal; Windows VST3 + Standalone
+
+=== REQUIREMENTS ===
+macOS 11 Big Sur or later, Intel or Apple Silicon.
+Windows 10 or later, 64-bit.
+VST3 host, AU host (Logic/GarageBand), or standalone.
+
+=== TAGLINES ===
+Never lose the moment.
+The best take is the one nobody was recording.
+Always listening. One button.
+You already played it. Now keep it.
+
+=== ONE-LINE PITCH (for a reply, a comment, a DM) ===
+It's a rolling buffer with a big button on it: play something great with the
+recorder off, hit KEEP LAST, and the last 8 bars are in your project.

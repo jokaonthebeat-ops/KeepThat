@@ -63,6 +63,15 @@ public:
     const MeterState& outputMeters() const noexcept { return outMeters; }
     WaveTrail<256>& trail() noexcept              { return liveTrail; }
     CaptureEngine& engine() noexcept              { return captureEngine; }
+
+    /** Throws away the rolling history. The buffer keeps recording - it is a
+        rolling window, it never stops - this just drops what is in it so the
+        clock starts again from zero. */
+    void clearBuffer() noexcept
+    {
+        ring.requestClear();
+        state.bufferAvailable = 0.0;
+    }
     PreviewPlayer& preview() noexcept             { return previewPlayer; }
     ClipLoader& loader() noexcept                 { return clipLoader; }
 

@@ -113,6 +113,9 @@ public:
             return t;
         };
 
+        addToggle ("Restart buffer after KEEP", processor.session().restartBufferAfterKeep,
+                   [this] (bool on) { processor.session().restartBufferAfterKeep = on; });
+
         addToggle ("Low power mode", processor.session().lowPowerMode,
                    [this] (bool on)
                    {
@@ -145,6 +148,15 @@ public:
         revealPresets.setCaptionInside (true);
         revealPresets.onClick = [] { WavExporter::reveal (PresetManager::presetsFolder()); };
 
+        addAndMakeVisible (clearBufferButton);
+        clearBufferButton.setAssetBase ("blank");
+        clearBufferButton.setCaptionInside (true);
+        clearBufferButton.onClick = [this]
+        {
+            processor.clearBuffer();
+            if (onBufferCleared) onBufferCleared();
+        };
+
         addAndMakeVisible (closeButton);
         closeButton.setAssetBase ("blank");
         closeButton.setCaptionInside (true);
@@ -152,6 +164,7 @@ public:
     }
 
     std::function<void()> onPerformanceChanged;
+    std::function<void()> onBufferCleared;
 
     void resized() override
     {
@@ -159,17 +172,21 @@ public:
         for (int i = 0; i < toggles.size(); ++i)
             toggles[i]->setBounds (body.getRight() - 66, body.getY() + i * 34 + 2, 60, 28);
 
-        auto buttons = cardBounds().reduced (26, 22).removeFromBottom (44);
+        auto area = cardBounds().reduced (26, 22);
+        auto buttons = area.removeFromBottom (44);
         revealCaptures.setBounds (buttons.removeFromLeft (150));
         buttons.removeFromLeft (10);
         revealPresets.setBounds (buttons.removeFromLeft (150));
         closeButton.setBounds (buttons.removeFromRight (86));
+
+        area.removeFromBottom (14);
+        clearBufferButton.setBounds (area.removeFromBottom (44).removeFromLeft (150));
     }
 
 protected:
     juce::Rectangle<int> cardBounds() const override
     {
-        return juce::Rectangle<int> (520, 330).withCentre (getLocalBounds().getCentre());
+        return juce::Rectangle<int> (520, 404).withCentre (getLocalBounds().getCentre());
     }
 
     void paintCard (juce::Graphics& g, juce::Rectangle<float> body) override
@@ -184,13 +201,15 @@ protected:
                           juce::Justification::topLeft, 2);
 
         body.removeFromTop (14.0f);
-        static const char* labels[] = { "Low power mode",
+        static const char* labels[] = { "Restart buffer after KEEP",
+                                        "Low power mode",
                                         "Reduce motion",
                                         "Write .m3u for Playlist" };
-        static const char* notes[] = { "30 fps instead of 60. Roughly halves the interface's CPU",
+        static const char* notes[] = { "The clock starts again from 0:00 each time you keep something",
+                                       "30 fps instead of 60. Roughly halves the interface's CPU",
                                        "Stops the ring's drift; meters keep moving",
                                        "Playlist destination also maintains a playlist file" };
-        for (int i = 0; i < 3; ++i)
+        for (int i = 0; i < 4; ++i)
         {
             auto row = body.removeFromTop (34.0f);
             g.setFont (Fonts::rowTitle().withHeight (13.0f));
@@ -207,11 +226,29 @@ protected:
         line (g, body, "Captures", WavExporter::directoryFor (Destination::folder,
                                                               processor.session())
                                        .getFullPathName());
+
+        // The explanation for CLEAR BUFFER sits beside the button, which is
+        // laid out from the bottom of the card - so it is placed against the
+        // card rather than against whatever `body` has left.
+        auto row = cardBounds().reduced (26, 22).removeFromBottom (102)
+                               .removeFromTop (44).toFloat();
+        row.removeFromLeft (160.0f);
+        g.setFont (Fonts::rowTitle().withHeight (13.0f));
+        g.setColour (tokens::textPrimary);
+        g.drawText ("Start the buffer clock again",
+                    row.removeFromTop (17.0f).toNearestInt(),
+                    juce::Justification::centredLeft, false);
+        g.setFont (Fonts::rowSub());
+        g.setColour (tokens::textMuted);
+        g.drawFittedText ("Throws away the history and counts up from 0:00. "
+                          "Recording never stops - your keeps are not affected.",
+                          row.toNearestInt(), juce::Justification::topLeft, 2);
     }
 
 private:
     KeepThatProcessor& processor;
     juce::OwnedArray<PillToggle> toggles;
+    TileButton clearBufferButton { "Clear buffer", {}, "CLEAR BUFFER" };
     TileButton revealCaptures { "Reveal captures", {}, "CAPTURES FOLDER" };
     TileButton revealPresets  { "Reveal presets",  {}, "PRESETS FOLDER" };
     TileButton closeButton    { "Close", {}, "CLOSE" };
@@ -270,6 +307,9 @@ protected:
             { "Recovery tools", "Applied as a capture is made, not afterwards" },
             { "SAVE / arrows",  "Saves and browses presets" },
             { "UNDO / REDO",    "Covers delete, rename, favourite and capture" },
+            { "After a KEEP",   "The buffer restarts, so the clock reads time since" },
+            { "Buffer full?",   "It never fills - it rolls. AVAILABLE 8:00 means you" },
+            { "",               "have the last 8 minutes. SETTINGS > CLEAR BUFFER restarts it" },
         };
 
         for (const auto& r : rows)

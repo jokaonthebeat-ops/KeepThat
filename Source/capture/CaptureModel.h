@@ -101,6 +101,11 @@ public:
         storage.clear();
         writePos.store (0, std::memory_order_relaxed);
         filled.store (0, std::memory_order_relaxed);
+        clearPending.store (false, std::memory_order_relaxed);
+        // Already zeroed by storage.clear(), so there is nothing to wipe -
+        // leaving the cursor at 0 would run the progressive wipe over a ring
+        // that is blank, every block, for no reason.
+        wipeCursor = capacity;
     }
 
     void reset()
@@ -108,13 +113,42 @@ public:
         storage.clear();
         writePos.store (0, std::memory_order_relaxed);
         filled.store (0, std::memory_order_relaxed);
+        clearPending.store (false, std::memory_order_relaxed);
+        wipeCursor = capacity;
     }
+
+    /** MESSAGE THREAD. Asks the audio thread to throw away the history.
+
+        It cannot just call `reset` - that memsets the whole ring, and at eight
+        minutes of stereo 48 kHz that is 176 MB. A memset that size on the
+        audio thread is tens of milliseconds and would drop out the session.
+
+        So the clear happens in two parts. The INDICES are reset on the next
+        block, which is O(1) and takes effect immediately: every read is bound
+        by `filled`, so the old audio is unreachable the instant that hits
+        zero. The storage is then wiped progressively, a bounded slice per
+        block, so nothing is left in memory either but no single block pays
+        for it. */
+    void requestClear() noexcept { clearPending.store (true, std::memory_order_release); }
+
+    /** True while the progressive wipe is still running. Nothing depends on
+        it - the buffer already reads as empty - but the tests check it. */
+    bool isWiping() const noexcept { return wipeCursor < capacity; }
 
     // AUDIO THREAD. No allocation, no locks.
     void write (const juce::AudioBuffer<float>& in) noexcept
     {
         if (capacity == 0)
             return;
+
+        // A clear asked for from the interface lands here, on the thread that
+        // owns the write index, so there is no race with the writer.
+        if (clearPending.exchange (false, std::memory_order_acquire))
+        {
+            writePos.store (0, std::memory_order_release);
+            filled.store (0, std::memory_order_relaxed);
+            wipeCursor = 0;                    // start the progressive wipe
+        }
 
         const int n = in.getNumSamples();
         const int mask = capacity - 1;
@@ -140,6 +174,30 @@ public:
         const int wasFilled = filled.load (std::memory_order_relaxed);
         if (wasFilled < capacity)
             filled.store (juce::jmin (capacity, wasFilled + n), std::memory_order_relaxed);
+
+        // Progressive wipe after a clear: a bounded slice per block, skipping
+        // whatever the write above has just legitimately put back. 64k samples
+        // is a quarter-megabyte memset - immaterial next to the block's own
+        // work - and clears an eight-minute ring in a few seconds.
+        if (wipeCursor < capacity)
+        {
+            const int slice = juce::jmin (65536, capacity - wipeCursor);
+            const int live  = filled.load (std::memory_order_relaxed);
+            for (int ch = 0; ch < channels; ++ch)
+            {
+                float* dst = storage.getWritePointer (ch);
+                for (int i = 0; i < slice; ++i)
+                {
+                    // Distance back from the write head; anything inside the
+                    // live window is new audio and must survive the wipe.
+                    const int idx = wipeCursor + i;
+                    const int back = (pos - idx + capacity) & (capacity - 1);
+                    if (back > live)
+                        dst[idx] = 0.0f;
+                }
+            }
+            wipeCursor += slice;
+        }
     }
 
     double availableSeconds() const noexcept
@@ -194,6 +252,8 @@ private:
     double sampleRate = 0.0, requested = 0.0;
     int channels = 2, capacity = 0;
     std::atomic<int> writePos { 0 };
+    std::atomic<bool> clearPending { false };
+    int wipeCursor = 0;                        // audio thread only
     std::atomic<int> filled   { 0 };
 };
 
@@ -386,6 +446,13 @@ struct SessionState
         40 % and 22 % of a core - the difference is CoreAnimation compositing
         a 1491 x 1055 layer, not the drawing - so low power is worth reaching
         for on an older machine or a heavy session. */
+    // After a KEEP LAST, throw away the history and start the clock again.
+    // The point of the plug-in is "what did I just play" - once you have kept
+    // it, the next thing you play is a new idea, and a buffer clock that keeps
+    // climbing past a capture tells you nothing about it. Off means the buffer
+    // is one continuous rolling window, the way it was before.
+    bool restartBufferAfterKeep = true;
+
     bool lowPowerMode = false;
     bool reduceMotion = false;
 

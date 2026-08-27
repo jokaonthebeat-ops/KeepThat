@@ -135,6 +135,10 @@ public:
         };
 
         settingsOverlay.onPerformanceChanged = [this] { applyPerformanceMode(); };
+        settingsOverlay.onBufferCleared = [this]
+        {
+            processor.session().lastMessage = "Buffer cleared - counting from 0:00";
+        };
         keeps.onPlay = [this] (int) { playSelected(); };
 
         processor.onClipLoaded = [this] (juce::int64)

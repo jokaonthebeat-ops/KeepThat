@@ -226,6 +226,15 @@ void KeepThatProcessor::applyCapture (CaptureClip clip)
     state.loadPreviewFrom (state.keeps.front());
     state.lastMessage = "Kept " + label;
 
+    // Start the window again, so the buffer clock measures "since I kept
+    // that" rather than "since I opened the plug-in". Recording does not
+    // stop - the ring never stops - it just drops what it was holding.
+    if (state.restartBufferAfterKeep)
+    {
+        clearBuffer();
+        state.lastMessage = "Kept " + label + " - buffer restarted";
+    }
+
     if (onCaptureApplied)
         onCaptureApplied();
 }
@@ -268,6 +277,7 @@ void KeepThatProcessor::getStateInformation (juce::MemoryBlock& destData)
     session.setProperty ("preset", state.presetName, nullptr);
     session.setProperty ("source", state.sourceName, nullptr);
     session.setProperty ("armed", state.armed, nullptr);
+    session.setProperty ("restartBufferAfterKeep", state.restartBufferAfterKeep, nullptr);
     session.setProperty ("selectedLength", state.selectedLength, nullptr);
     session.setProperty ("selectedSeconds", state.selectedSeconds, nullptr);
     session.setProperty ("destination", (int) state.destination, nullptr);
@@ -315,6 +325,8 @@ void KeepThatProcessor::setStateInformation (const void* data, int sizeInBytes)
     state.presetName      = session.getProperty ("preset", state.presetName).toString();
     state.sourceName      = session.getProperty ("source", state.sourceName).toString();
     state.armed           = session.getProperty ("armed", state.armed);
+    state.restartBufferAfterKeep = session.getProperty ("restartBufferAfterKeep",
+                                                        state.restartBufferAfterKeep);
     state.selectedLength  = session.getProperty ("selectedLength", state.selectedLength);
     state.selectedSeconds = session.getProperty ("selectedSeconds", state.selectedSeconds);
     state.destination     = (Destination) (int) session.getProperty ("destination",
