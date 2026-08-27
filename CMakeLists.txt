@@ -100,11 +100,18 @@ target_link_libraries(KeepThat
 #
 #  so the same loader works on both without a single #ifdef.
 # ------------------------------------------------------------------------------
+#  On macOS the standalone is an .app, so TARGET_FILE_DIR is Contents/MacOS and
+#  the assets have to go one level up - putting them beside the executable
+#  works only because the search walks upward, and it is the wrong place for a
+#  bundle. Caught by actually building this on macOS rather than trusting the
+#  Windows-shaped expression to be right everywhere.
 foreach(fmt VST3 Standalone)
     if(TARGET KeepThat_${fmt})
-        if(fmt STREQUAL "VST3")
+        if(fmt STREQUAL "VST3" OR (APPLE AND fmt STREQUAL "Standalone"))
+            # bundle: TARGET_FILE_DIR is <bundle>/Contents/<arch|MacOS>
             set(assetDest "$<TARGET_FILE_DIR:KeepThat_${fmt}>/../Resources/Assets")
         else()
+            # bare executable (Windows/Linux standalone): Resources sits beside it
             set(assetDest "$<TARGET_FILE_DIR:KeepThat_${fmt}>/Resources/Assets")
         endif()
         add_custom_command(TARGET KeepThat_${fmt} POST_BUILD
