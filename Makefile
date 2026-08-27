@@ -25,8 +25,17 @@
 
 PROJECT      := KeepThat
 VERSION      := 0.9.0
-JUCE_DIR     := /Users/jokabeatz/Documents/JUCE
+# Overridable: `make JUCE_DIR=/path/to/JUCE`, or export it. The fallback list
+# means a fresh clone builds without anyone editing this file - which matters
+# now that the repository is not just on the machine it was written on.
+JUCE_DIR     ?= $(firstword $(wildcard $(HOME)/Documents/JUCE $(HOME)/JUCE \
+                                       $(ROOT)/../JUCE /usr/local/JUCE))
 JUCE_MODULES := $(JUCE_DIR)/modules
+
+ifeq ($(wildcard $(JUCE_MODULES)/juce_core/juce_core.h),)
+  $(error JUCE not found. Set JUCE_DIR, e.g. make JUCE_DIR=/path/to/JUCE \
+          (looked in ~/Documents/JUCE, ~/JUCE, ../JUCE, /usr/local/JUCE))
+endif
 VST3_SDK     := $(JUCE_MODULES)/juce_audio_processors_headless/format_types/VST3_SDK
 
 ROOT   := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
