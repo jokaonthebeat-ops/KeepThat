@@ -45,8 +45,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/_deps
-          key: juce-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
-          restore-keys: juce-${{ runner.os }}-
+          # Keyed on the pinned JUCE version, NOT on the hash of
+          # CMakeLists.txt. Hashing the file meant any unrelated edit to it -
+          # a comment, an asset path - threw away the JUCE clone and rebuilt
+          # the framework from scratch, which is the opposite of the point.
+          key: juce-9.0.0-${{ runner.os }}
+          restore-keys: juce-9.0.0-
 
       # JUCE has deeply nested module paths, and FetchContent puts them under
       # D:\a\KeepThat\KeepThat\build\_deps\juce-src\... which runs into
