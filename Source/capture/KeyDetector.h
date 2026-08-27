@@ -52,6 +52,11 @@ public:
         check the chroma stage separately from the correlation stage. */
     static void buildChroma (const juce::AudioBuffer<float>& audio, double sampleRate,
                              std::array<float, 12>& chroma);
+
+    /** Prints the chroma, the bass chroma and the ranked candidates. For
+        tools/probe - this is how the relative-major/minor question gets
+        settled against a file whose real key is known. */
+    static void debugDump (const juce::AudioBuffer<float>& audio, double sampleRate);
 };
 
 } // namespace keepthat

@@ -64,6 +64,11 @@ public:
                                     double sampleRate,
                                     std::vector<float>& envelope,
                                     double& frameRate);
+
+    /** Prints the metrical candidates with their comb and prior scores, for
+        tools/probe. This is how a half-time reading gets told apart from a
+        wrong one. */
+    static void debugDump (const juce::AudioBuffer<float>& audio, double sampleRate);
 };
 
 } // namespace keepthat

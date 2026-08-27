@@ -225,7 +225,7 @@ CONFIG_STAMP := $(DIST)/.config-$(CONFIG_TAG)
 # -----------------------------------------------------------------------------
 
 .PHONY: all vst3 au standalone install universal clean distclean release \
-        juceobjs syntax uishot dsptest test installer notarize
+        juceobjs syntax uishot film dsptest test installer notarize
 
 all: vst3 au standalone
 
@@ -445,6 +445,24 @@ $(TOOLS)/uishot: $(PLUG_OBJS) $(ROOT)/tools/UIShot.cpp $(ROOT)/JucePluginDefines
 	@$(CXX) $(CXXFLAGS) -DJUCE_STANDALONE_APPLICATION=0 -DJucePlugin_Build_Standalone=0 \
 	   -c $(ROOT)/tools/UIShot.cpp -o $(TOOLS)/UIShot.o
 	@$(CXX) $(PLUG_OBJS) $(TOOLS)/UIShot.o $(LDFLAGS_BASE) -o $@
+
+$(TOOLS)/film: $(PLUG_OBJS) $(ROOT)/tools/Film.cpp $(ROOT)/JucePluginDefines.h
+	@mkdir -p $(TOOLS)
+	@echo "  CXX [tools]      Film.cpp"
+	@$(CXX) $(CXXFLAGS) -DJUCE_STANDALONE_APPLICATION=0 -DJucePlugin_Build_Standalone=0 \
+	   -c $(ROOT)/tools/Film.cpp -o $(TOOLS)/Film.o
+	@$(CXX) $(PLUG_OBJS) $(TOOLS)/Film.o $(LDFLAGS_BASE) -o $@
+
+$(TOOLS)/probe: $(PLUG_OBJS) $(ROOT)/tools/Probe.cpp $(ROOT)/JucePluginDefines.h
+	@mkdir -p $(TOOLS)
+	@echo "  CXX [tools]      Probe.cpp"
+	@$(CXX) $(CXXFLAGS) -DJUCE_STANDALONE_APPLICATION=0 -DJucePlugin_Build_Standalone=0 \
+	   -c $(ROOT)/tools/Probe.cpp -o $(TOOLS)/Probe.o
+	@$(CXX) $(PLUG_OBJS) $(TOOLS)/Probe.o $(LDFLAGS_BASE) -o $@
+
+probe: $(TOOLS)/probe
+
+film: $(TOOLS)/film
 
 uishot: $(TOOLS)/uishot
 	@cd $(BUILD) && $(TOOLS)/uishot $(ARGS)

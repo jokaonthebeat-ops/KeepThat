@@ -11,8 +11,12 @@
 //  properly filtered. H.264 wants even dimensions, so both are rounded down
 //  to even.
 //
-//  usage: mkvideo out.mp4 <frame-prefix> [fps] [width]
-//         reads <frame-prefix>_0000.png, _0001.png, ...
+//  usage: mkvideo out.mp4 <frame-prefix> [fps] [width] [audio=f] [audiostart=s]
+//         reads <frame-prefix>_00000.jpg / _0000.png, ...
+//
+//  With `audio=`, an AAC track is written alongside the video in the same
+//  pass. `audiostart=` skips into the source, and must match the offset the
+//  film was rendered with or the picture and the music drift apart.
 //
 #import <AVFoundation/AVFoundation.h>
 #import <CoreVideo/CoreVideo.h>
@@ -35,15 +39,35 @@ int main(int argc, const char *argv[]) {
         }
         NSString *outPath = [NSString stringWithUTF8String:argv[1]];
         NSString *prefix  = [NSString stringWithUTF8String:argv[2]];
-        int fps   = argc > 3 ? atoi(argv[3]) : 30;
-        int wantW = argc > 4 ? atoi(argv[4]) : 0;
+        // Named arguments in any order; the bare numbers are positional,
+        // first fps then width.
+        int fps = 30, wantW = 0;
+        NSString *audioPath = nil;
+        double audioStart = 0.0;
+        NSMutableArray<NSString *> *positional = [NSMutableArray array];
+        for (int i = 3; i < argc; ++i) {
+            NSString *a = [NSString stringWithUTF8String:argv[i]];
+            if ([a hasPrefix:@"audio="])           audioPath  = [a substringFromIndex:6];
+            else if ([a hasPrefix:@"audiostart="]) audioStart = [[a substringFromIndex:11] doubleValue];
+            else                                   [positional addObject:a];
+        }
+        if (positional.count > 0) fps   = positional[0].intValue;
+        if (positional.count > 1) wantW = positional[1].intValue;
+        if (fps <= 0) fps = 30;
 
         // Collect the frame sequence.
+        // Accepts either padding and either format: uishot writes 4-digit PNG,
+        // the film tool writes 5-digit JPEG (a 93-second film in PNG masters
+        // would be several gigabytes).
         NSMutableArray<NSString *> *frames = [NSMutableArray array];
-        for (int i = 0; ; ++i) {
-            NSString *p = [NSString stringWithFormat:@"%@_%04d.png", prefix, i];
-            if (![[NSFileManager defaultManager] fileExistsAtPath:p]) break;
-            [frames addObject:p];
+        NSArray *patterns = @[@"%@_%05d.jpg", @"%@_%05d.png", @"%@_%04d.png", @"%@_%04d.jpg"];
+        for (NSString *pat in patterns) {
+            for (int i = 0; ; ++i) {
+                NSString *p = [NSString stringWithFormat:pat, prefix, i];
+                if (![[NSFileManager defaultManager] fileExistsAtPath:p]) break;
+                [frames addObject:p];
+            }
+            if (frames.count > 0) break;
         }
         if (frames.count == 0) {
             fprintf(stderr, "no frames found matching %s_0000.png\n", argv[2]);
@@ -95,6 +119,44 @@ int main(int argc, const char *argv[]) {
                 (id)kCVPixelBufferWidthKey           : @(outW),
                 (id)kCVPixelBufferHeightKey          : @(outH),
             }];
+
+        // ---- optional audio track ------------------------------------------
+        AVAssetWriterInput *audioIn = nil;
+        AVAssetReader *audioReader = nil;
+        AVAssetReaderTrackOutput *audioOut = nil;
+        const double videoSeconds = (double)frames.count / fps;
+
+        if (audioPath) {
+            AVURLAsset *aAsset = [AVURLAsset URLAssetWithURL:[NSURL fileURLWithPath:audioPath] options:nil];
+            AVAssetTrack *aTrack = [[aAsset tracksWithMediaType:AVMediaTypeAudio] firstObject];
+            if (!aTrack) { fprintf(stderr, "no audio track in %s\n", audioPath.UTF8String); return 2; }
+
+            audioReader = [AVAssetReader assetReaderWithAsset:aAsset error:&err];
+            audioReader.timeRange = CMTimeRangeMake(CMTimeMakeWithSeconds(audioStart, 600),
+                                                    CMTimeMakeWithSeconds(videoSeconds, 600));
+            audioOut = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:aTrack
+                        outputSettings:@{
+                            AVFormatIDKey            : @(kAudioFormatLinearPCM),
+                            AVLinearPCMBitDepthKey   : @16,
+                            AVLinearPCMIsFloatKey    : @NO,
+                            AVLinearPCMIsBigEndianKey: @NO,
+                            AVLinearPCMIsNonInterleaved: @NO,
+                        }];
+            [audioReader addOutput:audioOut];
+
+            AudioChannelLayout stereo = {0};
+            stereo.mChannelLayoutTag = kAudioChannelLayoutTag_Stereo;
+            audioIn = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeAudio
+                       outputSettings:@{
+                           AVFormatIDKey         : @(kAudioFormatMPEG4AAC),
+                           AVNumberOfChannelsKey : @2,
+                           AVSampleRateKey       : @48000,
+                           AVEncoderBitRateKey   : @192000,
+                           AVChannelLayoutKey    : [NSData dataWithBytes:&stereo length:sizeof(stereo)],
+                       }];
+            audioIn.expectsMediaDataInRealTime = NO;
+            [writer addInput:audioIn];
+        }
 
         [writer addInput:input];
         if (![writer startWriting]) {
@@ -149,6 +211,33 @@ int main(int argc, const char *argv[]) {
         CGColorSpaceRelease(cs);
         [input markAsFinished];
 
+        // Audio is pumped after the picture. The writer is not real-time, so
+        // the inputs do not have to be interleaved - only both finished before
+        // the file is closed.
+        if (audioIn) {
+            int appended = 0;
+            if ([audioReader startReading]) {
+                while (1) {
+                    CMSampleBufferRef sb = [audioOut copyNextSampleBuffer];
+                    if (!sb) break;
+                    while (!audioIn.isReadyForMoreMediaData)
+                        [NSThread sleepForTimeInterval:0.002];
+                    if (![audioIn appendSampleBuffer:sb]) { CFRelease(sb); break; }
+                    CFRelease(sb);
+                    ++appended;
+                }
+                printf("  muxed %d audio buffers from %s (from %.1fs)\n",
+                       appended, [audioPath lastPathComponent].UTF8String, audioStart);
+            } else {
+                fprintf(stderr, "  WARNING: could not read audio (%s) - writing silent video\n",
+                        audioReader.error.localizedDescription.UTF8String);
+            }
+            // ALWAYS finish this input. An input that is added to the writer
+            // and never marked finished makes finishWriting hang forever, with
+            // a zero-byte file and no error - which is exactly what happened.
+            [audioIn markAsFinished];
+        }
+
         __block BOOL done = NO;
         [writer finishWritingWithCompletionHandler:^{ done = YES; }];
         while (!done) [NSThread sleepForTimeInterval:0.01];
@@ -160,9 +249,10 @@ int main(int argc, const char *argv[]) {
 
         unsigned long long bytes =
             [[[NSFileManager defaultManager] attributesOfItemAtPath:outPath error:nil] fileSize];
-        printf("wrote %s  (%d frames, %zux%zu, %d fps, %.1f s, %.1f MB)\n",
+        printf("wrote %s  (%d frames, %zux%zu, %d fps, %.1f s, %.1f MB%s)\n",
                outPath.UTF8String, written, outW, outH, fps,
-               (double)written / fps, bytes / 1048576.0);
+               (double)written / fps, bytes / 1048576.0,
+               audioPath ? ", with AAC audio" : ", silent");
     }
     return 0;
 }
