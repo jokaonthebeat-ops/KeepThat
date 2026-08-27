@@ -58,8 +58,29 @@ jobs:
           git config --system core.longpaths true
           reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f
 
+      # What is actually on this image? Printed to the summary because the
+      # job log needs admin rights to download, and a Configure failure this
+      # fast is almost always the toolchain, not the CMakeLists.
+      - name: Toolchain
+        shell: pwsh
+        run: |
+          "## Toolchain" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          '```' | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          cmake --version | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (Test-Path $vswhere) {
+            & $vswhere -products * -property displayName | Out-File -Append $env:GITHUB_STEP_SUMMARY
+            & $vswhere -products * -property installationVersion | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          } else { "vswhere not found" | Out-File -Append $env:GITHUB_STEP_SUMMARY }
+          '```' | Out-File -Append $env:GITHUB_STEP_SUMMARY
+
+      # The generator is deliberately NOT pinned. `windows-latest` moves to a
+      # new image (and a new Visual Studio) periodically, and pinning
+      # "Visual Studio 17 2022" makes configure fail in seconds with "could not
+      # find any instance of Visual Studio" the moment that happens. CMake's
+      # default on Windows is the newest installed VS, which is what we want.
       - name: Configure
-        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+        run: cmake -B build -A x64
 
       # If configure fails, the reason is in CMake's own logs and the job log
       # needs admin to download - so surface it in the run summary instead.
