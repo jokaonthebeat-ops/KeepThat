@@ -1,0 +1,15 @@
+id,type,x,y,w,h,asset_family,notes
+logo,image,18,18,360,70,01_BRAND,premium header logo
+presetField,composite,486,24,500,54,05_BUTTONS/BLANK_SHELLS,live preset text and arrows
+bufferHud,hud,500,112,514,396,03_HUD,layered + animated
+keepLast,button,470,405,545,88,05_BUTTONS/KEEP_LAST,hero button
+captureSelectors,buttonGroup,520,505,450,70,05_BUTTONS/CAPTURE_SELECTOR,live labels
+inputMeterL,meter,28,205,32,220,07_METERS,live
+inputMeterR,meter,64,205,32,220,07_METERS,live
+inputWaveform,waveform,116,202,284,92,08_VISUALIZERS,live
+recoveryRows,toggleRows,1102,162,344,294,09_TILES/RECOVERY_ROWS,live labels/toggles
+phraseCard,card,1102,465,344,96,09_TILES/PHRASE_CARD,live waveform/confidence
+captureTimeline,timeline,138,593,980,150,08_VISUALIZERS,trim handles and playhead
+recentKeeps,tileList,18,748,1165,107,09_TILES/RECENT_KEEPS,scrolling
+outputMeterL,meter,1132,912,275,24,07_METERS/HORIZONTAL,live
+outputMeterR,meter,1132,946,275,24,07_METERS/HORIZONTAL,live

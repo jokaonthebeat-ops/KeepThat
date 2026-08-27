@@ -1,0 +1,12 @@
+# QA Acceptance Criteria
+- Opens at 1491 x 1055 and preserves the exact aspect ratio.
+- No default JUCE controls remain visible.
+- All 128-frame knobs map correctly from minimum to maximum.
+- HUD layers align without seams and animate smoothly.
+- Button states are visibly distinct and do not jump in size.
+- Timeline trim handles remain usable at all supported scales.
+- Meter motion is smooth and peak hold is readable.
+- No UI thread stutter during recording or export.
+- Audio path is transparent when preview is idle.
+- No allocations, locks or disk I/O occur in processBlock.
+- AU/VST3/Standalone reopen without losing settings.

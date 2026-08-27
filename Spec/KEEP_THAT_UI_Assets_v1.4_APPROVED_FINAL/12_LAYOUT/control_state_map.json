@@ -1,0 +1,48 @@
+{
+  "keep_last": [
+    "normal",
+    "hover",
+    "pressed",
+    "disabled"
+  ],
+  "capture_selector": [
+    "normal",
+    "hover",
+    "pressed",
+    "selected",
+    "disabled"
+  ],
+  "transport": [
+    "normal",
+    "hover",
+    "pressed",
+    "disabled"
+  ],
+  "export_button": [
+    "normal",
+    "hover",
+    "pressed",
+    "selected",
+    "disabled"
+  ],
+  "toggle": [
+    "off",
+    "off_hover",
+    "on",
+    "on_hover",
+    "off_disabled",
+    "on_disabled"
+  ],
+  "recent_keep": [
+    "normal",
+    "hover",
+    "selected",
+    "favorite"
+  ],
+  "recovery_row": [
+    "normal",
+    "hover",
+    "active",
+    "disabled"
+  ]
+}

@@ -1,0 +1,18 @@
+# Build output
+build/
+dist/
+*.o
+*.d
+
+# Rendered stills and frame sequences - regenerate with `make uishot`
+KeepThat-*.png
+sweep_*.png
+mark_*.png
+frames/
+
+# macOS
+.DS_Store
+._*
+
+# Installer staging
+packaging/pkgroot/

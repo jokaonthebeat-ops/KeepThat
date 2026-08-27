@@ -1,0 +1,12 @@
+# Asset Usage Map
+- `02_CHASSIS`: static plugin shell.
+- `03_HUD/LAYERS`: compose the central display.
+- `03_HUD/ANIMATION`: orbit and pulse overlays.
+- `04_KNOBS/FILMSTRIPS`: six bottom controls.
+- `05_BUTTONS`: all image-button state families.
+- `06_SWITCHES`: Recovery Tools toggles.
+- `07_METERS`: input and output metering.
+- `08_VISUALIZERS`: waveform/timeline/trim graphics.
+- `09_TILES`: Recent Keeps, recovery rows and phrase card.
+- `10_PANELS`: exact and reusable panel shells.
+- `11_ICONS`: live icon overlays and utility controls.

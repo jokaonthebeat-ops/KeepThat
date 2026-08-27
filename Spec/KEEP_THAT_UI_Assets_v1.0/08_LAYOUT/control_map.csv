@@ -1,0 +1,25 @@
+id,type,label,x,y,w,h,notes
+logoHeader,image,KEEP THAT! logo,18,18,350,72,Recreate as premium live branding asset
+presetBar,composite,Hook Recovery Session,486,24,500,54,Prev/next arrows + preset label
+saveBtn,iconButton,SAVE,1086,20,58,58,Header utility
+settingsBtn,iconButton,SETTINGS,1160,20,72,58,Header utility
+helpBtn,iconButton,HELP,1240,20,58,58,Header utility
+undoBtn,iconButton,UNDO,1310,20,58,58,Header utility
+redoBtn,iconButton,REDO,1374,20,58,58,Header utility
+powerBtn,iconButton,POWER,1440,18,40,62,Header utility in red
+liveInputMeters,meterPair,L/R input meters,28,200,82,220,Stereo LED meters
+liveInputWaveform,waveform,Input activity,115,203,285,90,Cyan waveform on dark grid
+bufferRing,circularDisplay,Rolling buffer,535,135,445,295,Animated red/cyan segmented ring
+keepLastBtn,primaryButton,KEEP LAST,470,405,545,88,Large red illuminated action button
+lengthButtons,buttonRow,1 BAR..PHRASE,520,505,450,70,Two rows of selectable capture length buttons
+recoveryStack,toggleList,Recovery tools,1102,162,344,294,"Auto Trim, Silence Detect, Zero Crossing, Fade, Normalize, Drag Export"
+phraseCard,card,PHRASE DETECTED,1102,465,344,96,Mini waveform + confidence
+transportCol,buttonStack,PLAY/STOP/TRIM,18,594,90,142,Left vertical transport buttons
+captureTimeline,timeline,CAPTURE PREVIEW,138,593,980,150,Large editable waveform with trim handles
+timelineActions,buttonStack,RENAME/SAVE WAV/DRAG TO DAW,1125,596,62,145,Right actions column
+exportPanel,buttonGrid,EXPORT DESTINATION,1275,596,195,180,DAW Drag / Sampler / Playlist / Folder / Desktop
+recentKeeps,cardRow,RECENT KEEPS,18,748,1165,107,Eight clip cards scroll horizontally
+bottomKnobs,knobRow,Buffer Length..Output,15,889,1060,126,Six premium knobs
+outputMeter,meterPair,Stereo output,1132,912,275,62,Horizontal L/R meters
+muteBtn,button,MUTE,1430,912,45,66,Output section
+footerTagline,label,NEVER LOSE THE MOMENT,520,1023,450,20,Gold footer tagline

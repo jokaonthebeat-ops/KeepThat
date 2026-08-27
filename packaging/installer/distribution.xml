@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    KEEP THAT! retail installer.
+
+    @VERSION@ is substituted by the Makefile at build time, so the version
+    here can never drift from the one in the component packages.
+-->
+<installer-gui-script minSpecVersion="2">
+    <title>KEEP THAT! @VERSION@</title>
+    <organization>com.diamondloopz</organization>
+    <domains enable_localSystem="true" enable_anywhere="false" enable_currentUserHome="false"/>
+    <options customize="always" require-scripts="false" hostArchitectures="x86_64,arm64"/>
+
+    <welcome    file="welcome.html"    mime-type="text/html"/>
+    <license    file="license.html"    mime-type="text/html"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+
+    <!-- Every format is optional: plenty of people want the AU and not the
+         VST3, or the standalone and neither plug-in. -->
+    <choices-outline>
+        <line choice="vst3"/>
+        <line choice="au"/>
+        <line choice="app"/>
+    </choices-outline>
+
+    <choice id="vst3" visible="true" title="VST3 Plug-in"
+            description="Installs to /Library/Audio/Plug-Ins/VST3. For Ableton Live, Cubase, Studio One, REAPER, Bitwig and most other hosts.">
+        <pkg-ref id="com.diamondloopz.keepthat.vst3"/>
+    </choice>
+
+    <choice id="au" visible="true" title="Audio Unit Plug-in"
+            description="Installs to /Library/Audio/Plug-Ins/Components. For Logic Pro, GarageBand and MainStage.">
+        <pkg-ref id="com.diamondloopz.keepthat.au"/>
+    </choice>
+
+    <choice id="app" visible="true" title="Standalone App"
+            description="Installs KEEP THAT! to /Applications. Runs on its own with no DAW - useful for catching ideas straight off an interface.">
+        <pkg-ref id="com.diamondloopz.keepthat.app"/>
+    </choice>
+
+    <pkg-ref id="com.diamondloopz.keepthat.vst3" version="@VERSION@" onConclusion="none">KeepThat-VST3.pkg</pkg-ref>
+    <pkg-ref id="com.diamondloopz.keepthat.au"   version="@VERSION@" onConclusion="none">KeepThat-AU.pkg</pkg-ref>
+    <pkg-ref id="com.diamondloopz.keepthat.app"  version="@VERSION@" onConclusion="none">KeepThat-App.pkg</pkg-ref>
+</installer-gui-script>

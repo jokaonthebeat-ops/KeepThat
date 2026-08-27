@@ -1,0 +1,83 @@
+{
+  "product": "KEEP THAT!",
+  "version": "1.0",
+  "canvas": {
+    "width": 1491,
+    "height": 1055,
+    "aspect_ratio": "1491:1055"
+  },
+  "theme": {
+    "primary_accent": "#ff4b2e",
+    "secondary_accent": "#00d7ff",
+    "tertiary_accent": "#ffb24a",
+    "background": "#090c12"
+  },
+  "regions": {
+    "header": {
+      "x": 10,
+      "y": 10,
+      "w": 1471,
+      "h": 90
+    },
+    "live_input_panel": {
+      "x": 15,
+      "y": 115,
+      "w": 415,
+      "h": 385
+    },
+    "buffer_hud_area": {
+      "x": 442,
+      "y": 113,
+      "w": 630,
+      "h": 447
+    },
+    "recovery_tools_panel": {
+      "x": 1086,
+      "y": 114,
+      "w": 392,
+      "h": 454
+    },
+    "left_transport": {
+      "x": 15,
+      "y": 590,
+      "w": 105,
+      "h": 150
+    },
+    "capture_preview_panel": {
+      "x": 135,
+      "y": 590,
+      "w": 1051,
+      "h": 152
+    },
+    "right_capture_actions": {
+      "x": 1190,
+      "y": 590,
+      "w": 70,
+      "h": 152
+    },
+    "export_destination_panel": {
+      "x": 1270,
+      "y": 590,
+      "w": 208,
+      "h": 200
+    },
+    "recent_keeps_panel": {
+      "x": 15,
+      "y": 742,
+      "w": 1177,
+      "h": 143
+    },
+    "bottom_controls_panel": {
+      "x": 15,
+      "y": 887,
+      "w": 1463,
+      "h": 131
+    },
+    "footer_status": {
+      "x": 10,
+      "y": 1018,
+      "w": 1471,
+      "h": 30
+    }
+  }
+}

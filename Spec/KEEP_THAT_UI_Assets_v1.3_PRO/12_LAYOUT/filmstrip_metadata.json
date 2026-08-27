@@ -1,0 +1,51 @@
+{
+  "macro_knob": {
+    "path": "04_KNOBS/FILMSTRIPS/macro_knob_128frames_160x160_vertical.png",
+    "frames": 128,
+    "frame_width": 160,
+    "frame_height": 160,
+    "orientation": "vertical"
+  },
+  "small_knob": {
+    "path": "04_KNOBS/FILMSTRIPS/small_knob_128frames_112x112_vertical.png",
+    "frames": 128,
+    "frame_width": 112,
+    "frame_height": 112,
+    "orientation": "vertical"
+  },
+  "fine_tune_gold": {
+    "path": "04_KNOBS/FILMSTRIPS/fine_tune_gold_knob_128frames_160x160_vertical.png",
+    "frames": 128,
+    "frame_width": 160,
+    "frame_height": 160,
+    "orientation": "vertical"
+  },
+  "hud_orbit": {
+    "path": "03_HUD/ANIMATION/hud_orbit_64frames_384x384_vertical.png",
+    "frames": 64,
+    "frame_width": 384,
+    "frame_height": 384,
+    "orientation": "vertical"
+  },
+  "hud_pulse": {
+    "path": "03_HUD/ANIMATION/hud_pulse_32frames_384x384_vertical.png",
+    "frames": 32,
+    "frame_width": 384,
+    "frame_height": 384,
+    "orientation": "vertical"
+  },
+  "meter_vertical": {
+    "path": "07_METERS/FILMSTRIPS/meter_vertical_64frames_60x240_vertical.png",
+    "frames": 64,
+    "frame_width": 60,
+    "frame_height": 240,
+    "orientation": "vertical"
+  },
+  "meter_horizontal": {
+    "path": "07_METERS/FILMSTRIPS/meter_horizontal_64frames_320x34_vertical.png",
+    "frames": 64,
+    "frame_width": 320,
+    "frame_height": 34,
+    "orientation": "vertical"
+  }
+}

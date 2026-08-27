@@ -1,0 +1,13 @@
+# APVTS Parameter Plan
+- bufferLengthMinutes: 1.0 to 8.0, default 8.0
+- sensitivity: 0.0 to 1.0, default 0.72
+- autoTrimAmount: 0.0 to 1.0, default 0.85
+- previewMix: 0.0 to 1.0, default 0.50
+- fadeMilliseconds: 0.0 to 200.0, default 10.0
+- outputGainDb: -60.0 to +12.0, default 0.0
+- normalizeEnabled: bool, default false
+- normalizeTargetDb: -12.0 to 0.0, default -1.0
+- zeroCrossingEnabled: bool, default true
+- silenceDetectEnabled: bool, default true
+- dragExportEnabled: bool, default true
+- mute: bool, default false

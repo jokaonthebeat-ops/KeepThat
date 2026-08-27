@@ -1,0 +1,17 @@
+juce_add_binary_data(KeepThatAssets
+    SOURCES
+        Assets/01_BRAND/HEADER/keep_that_logo_640w.png
+        Assets/02_CHASSIS/keep_that_chassis_1491x1055.png
+        Assets/03_HUD/LAYERS/hud_outer_bezel.png
+        Assets/03_HUD/LAYERS/hud_center_glass.png
+        Assets/03_HUD/LAYERS/hud_tick_ring.png
+        Assets/03_HUD/LAYERS/hud_red_segments.png
+        Assets/03_HUD/LAYERS/hud_cyan_segments.png
+        Assets/03_HUD/ANIMATION/hud_orbit_64frames_384x384_vertical.png
+        Assets/04_KNOBS/FILMSTRIPS/macro_knob_128frames_160x160_vertical.png
+        Assets/05_BUTTONS/KEEP_LAST/keep_last_normal.png
+        Assets/05_BUTTONS/KEEP_LAST/keep_last_hover.png
+        Assets/05_BUTTONS/KEEP_LAST/keep_last_pressed.png
+        Assets/07_METERS/SEGMENTS/meter_segment_cyan.png
+        Assets/08_VISUALIZERS/TIMELINE/timeline_grid_bars_beats_1024x180.png
+)

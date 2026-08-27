@@ -1,0 +1,2 @@
+# Rolling Buffer Engine Specification
+Use a preallocated circular buffer sized from maximum sample rate, channel count and the selected maximum duration. The audio callback only writes incoming samples and atomically publishes the write position. Recovery requests capture a snapshot of the relevant sample range and hand it to a worker thread. Bar recovery uses host tempo, PPQ position and time signature; fall back to seconds when host timing is unavailable. Preserve exact latency alignment and never process or write files on the audio thread.
