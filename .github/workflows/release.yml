@@ -20,6 +20,12 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+# One run per ref. A re-push should cancel the run it supersedes rather than
+# paying for both - this repository is on metered minutes.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -29,6 +35,18 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Windows runners bill at a 2x minute multiplier, and the biggest
+      # avoidable cost in this job is re-cloning and re-building JUCE on every
+      # run. FetchContent puts it in build/_deps; caching that keyed on the
+      # CMakeLists (which pins the JUCE tag) turns a fresh clone + full
+      # framework build into a restore.
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: juce-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: juce-${{ runner.os }}-
 
       - name: Configure
         run: cmake -B build -G "Visual Studio 17 2022" -A x64
@@ -66,7 +84,9 @@ jobs:
 
           Compress-Archive -Path "$stage/*" -DestinationPath "KeepThat-Windows.zip" -Force
 
+      # Only on failure - on a good run this is just minutes spent printing.
       - name: Show what was built
+        if: failure()
         shell: pwsh
         run: Get-ChildItem -Recurse build/KeepThat_artefacts | Select-Object FullName
 
