@@ -1,0 +1,45 @@
+KEEP THAT! - Licence Agreement
+================================================================================
+
+KEEP THAT! — Licence Agreement
+--------------------------------------------------------------------------------
+Diamond Loopz · Version 0.9.0
+
+1. Licence
+--------------------------------------------------------------------------------
+Diamond Loopz grants you a personal, non-exclusive licence to install and
+use KEEP THAT! on computers you own or control, for both personal and
+commercial music production. There is no charge for this licence.
+
+2. Your recordings are yours
+--------------------------------------------------------------------------------
+Diamond Loopz claims no rights of any kind over audio you capture, export
+or produce using this software. Anything you make with it belongs entirely to
+you.
+
+3. What you may not do
+--------------------------------------------------------------------------------
+You may not sell, rent, or redistribute the software itself, or present it
+as your own product. You may not reverse-engineer, decompile or disassemble it
+except where that restriction is prohibited by law.
+
+4. No warranty
+--------------------------------------------------------------------------------
+The software is provided "as is", without warranty of any kind, express or
+implied, including but not limited to the warranties of merchantability and
+fitness for a particular purpose. You are responsible for keeping your own
+backups of your work.
+
+5. Limitation of liability
+--------------------------------------------------------------------------------
+To the fullest extent permitted by law, Diamond Loopz shall not be liable
+for any claim, damages, lost recordings, lost profits or other liability
+arising from the use of this software.
+
+6. Privacy
+--------------------------------------------------------------------------------
+KEEP THAT! does not transmit audio, telemetry or personal information. It
+makes no network connections. Everything it records stays on your machine.
+
+If you do not agree to these terms, do not install the
+software.

@@ -48,8 +48,33 @@ jobs:
           key: juce-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
           restore-keys: juce-${{ runner.os }}-
 
+      # JUCE has deeply nested module paths, and FetchContent puts them under
+      # D:\a\KeepThat\KeepThat\build\_deps\juce-src\... which runs into
+      # Windows' 260-character MAX_PATH. That is the classic way a JUCE build
+      # fails on a Windows runner and nowhere else - this configure succeeds on
+      # macOS with the same CMakeLists.
+      - name: Allow long paths
+        run: |
+          git config --system core.longpaths true
+          reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f
+
       - name: Configure
         run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+      # If configure fails, the reason is in CMake's own logs and the job log
+      # needs admin to download - so surface it in the run summary instead.
+      - name: Show CMake errors
+        if: failure()
+        shell: pwsh
+        run: |
+          foreach ($f in @("build/CMakeFiles/CMakeError.log","build/CMakeFiles/CMakeOutput.log","build/CMakeFiles/CMakeConfigureLog.yaml")) {
+            if (Test-Path $f) {
+              "## $f" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+              '```' | Out-File -Append $env:GITHUB_STEP_SUMMARY
+              Get-Content $f -Tail 120 | Out-File -Append $env:GITHUB_STEP_SUMMARY
+              '```' | Out-File -Append $env:GITHUB_STEP_SUMMARY
+            }
+          }
 
       - name: Build
         run: cmake --build build --config Release --parallel 4
