@@ -15,9 +15,9 @@ reading live audio. Nothing here is a mockup.
 | `screenshots/*-2237.png` | Full-resolution masters (2237×1583, the editor's 150% size) |
 | `screenshots/*-1491.png` | Masters at the design size (1491×1055) |
 | `screenshots/web/*.jpg` | Quality-84 JPEGs at 1600 px for web use |
-| `video/KeepThat-Demo.mp4` | 5 s demo, 1280×906, 60 fps, H.264 |
+| `video/KeepThat-Demo.mp4` | 93 s demo film, 1920×1080, 30 fps, H.264 + AAC |
 | `video/KeepThat-Demo.gif` | The same take as a looping GIF, 579 KB, for READMEs |
-| `video-stills/` | One frame per beat of the demo, for checking without scrubbing |
+| `video-stills/` | One frame per act, pulled from the film with `tools/grab` |
 | `logo/` | App icon at 1024 and 512, the `.icns`, and the wordmark |
 
 ## The screenshots
@@ -33,20 +33,11 @@ reading live audio. Nothing here is a mockup.
 Masters are at **2237×1583**, which is the editor's own 150% size — the
 largest it renders natively. They are not upscaled.
 
-## The demo
+## The film
 
-| At | What it shows |
-| --- | --- |
-| 0:00 | Buffer filling, meters live, sweep marker moving on the tick ring |
-| 0:01.5 | Still empty — "Nothing captured yet", "No keeps yet" |
-| 0:02 | **KEEP LAST pressed** |
-| 0:02+ | 4-bar waveform lands in CAPTURE PREVIEW, "Keep 1" appears in the rack |
-| 0:05 | Loops |
-
-Rendered with `build/tools/uishot <out> def fill=100 frames=300 keepat=90`,
-which drives the real capture engine and presses the real button. Encoded by
-`tools/mkvideo.m` (AVFoundation) and `tools/gif.py` — there is no ffmpeg on
-the build machine and neither tool needs one.
+93 seconds, ten acts - see `video/README.md` for the shot list. Shot against
+**High Mileage** (Joka Beatz, 150 BPM, A# minor); the KEY and BPM on screen are
+the plug-in's own analysis of that track.
 
 ## Regenerating
 

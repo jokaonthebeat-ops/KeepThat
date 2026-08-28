@@ -40,6 +40,8 @@ int main (int argc, char** argv)
     juce::String overlay;
     int settleFrames = 90;
     double fillSeconds = 6.0;
+    juce::File audioFile;        // audio=FILE -> shoot against real material
+    double audioStart = 0.0;
     int frameCount = 0;          // frames=N -> render an animation, not a still
     int keepAtFrame = -1;        // keepat=F -> press KEEP LAST on frame F
     for (int i = 3; i < argc; ++i)
@@ -66,6 +68,13 @@ int main (int argc, char** argv)
                              a.fromFirstOccurrenceOf ("=", false, false).getIntValue());
             feed = true;
         }
+        else if (a.startsWith ("audio="))
+        {
+            audioFile = juce::File (juce::String (argv[i]).fromFirstOccurrenceOf ("=", false, false));
+            feed = true;
+        }
+        else if (a.startsWith ("audiostart="))
+            audioStart = a.fromFirstOccurrenceOf ("=", false, false).getDoubleValue();
         else if (a.startsWith ("keepat="))
             keepAtFrame = a.fromFirstOccurrenceOf ("=", false, false).getIntValue();
         else if (a.contains ("signal"))
@@ -122,10 +131,38 @@ int main (int argc, char** argv)
     float lp = 0.0f;
     int sampleIndex = 0;
 
+    // Shooting against the real track means the KEY and BPM readouts in a
+    // screenshot are the ones a customer would see, not a synthetic stand-in.
+    juce::AudioFormatManager formats;
+    formats.registerBasicFormats();
+    std::unique_ptr<juce::AudioFormatReader> reader;
+    if (audioFile != juce::File())
+    {
+        reader.reset (formats.createReaderFor (audioFile));
+        if (reader == nullptr)
+        {
+            std::printf ("FAIL: could not read %s\n", audioFile.getFullPathName().toRawUTF8());
+            return 2;
+        }
+    }
+    juce::int64 readPos = reader != nullptr
+                            ? (juce::int64) (audioStart * reader->sampleRate) : 0;
+
     auto pushBlock = [&] (int numSamples)
     {
         juce::AudioBuffer<float> audio (2, numSamples);
         juce::MidiBuffer midi;
+
+        if (reader != nullptr)
+        {
+            if (readPos + numSamples >= (juce::int64) reader->lengthInSamples)
+                readPos = 0;
+            reader->read (&audio, 0, numSamples, readPos, true, true);
+            readPos += numSamples;
+            sampleIndex += numSamples;
+            processor.processBlock (audio, midi);
+            return;
+        }
         for (int i = 0; i < numSamples; ++i)
         {
             const double t = sampleIndex / 48000.0;

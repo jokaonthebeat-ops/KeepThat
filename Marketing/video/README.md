@@ -1,49 +1,57 @@
-# Demo video
+# Demo film
 
 | File | Shape | Length | Size |
 | --- | --- | --- | --- |
-| `KeepThat-Demo.mp4` | 1280×906, 60 fps | 5.0 s | 4.9 MB |
-| `KeepThat-Demo.gif` | 720×509, 15 fps | 5.0 s | 579 KB |
+| `KeepThat-Demo.mp4` | 1920x1080, 16:9 | 93 s | 72 MB |
+| `KeepThat-Demo.gif` | 720x509, 15 fps | 5 s | 579 KB |
 
-H.264 at 12 Mbit, no audio. Both are the same take.
+H.264 at 12 Mbit, 30 fps, with AAC audio.
 
-## Why it is short
+Source: **High Mileage** - Joka Beatz, 150 BPM, A# minor. The film reads the
+track from 12 s in, and the muxed audio starts at the same offset, so the music
+you hear is the audio the plug-in was analysing when it made each capture. The
+KEY and BPM readouts on screen are that analysis, not a caption.
 
-The product is one gesture. The whole pitch is "you didn't record it, and now
-you have it" — which takes about two seconds to show and does not improve by
-being stretched. The loop is built to be watched three times without noticing.
-
-## Structure
-
-| At | Frame | What is happening |
-| --- | --- | --- |
-| 0:00 | 0 | 1:40 already buffered. Meters moving, marker on the tick ring |
-| 0:01.5 | 90 | **KEEP LAST pressed** |
-| 0:02 | ~120 | Capture lands: 4-bar waveform, `Keep 1`, counter reads 1/100 |
-| 0:05 | 299 | Loops back |
-
-The capture is real. `uishot` invokes the actual button handler, the capture
-engine runs on its worker thread, and the frame loop drains it the moment it
-finishes — so the number of frames the plug-in spends "busy" in the film is
-the number of frames it really takes.
-
-## A longer film, if one is wanted
-
-Not rendered. This is the shot list it would follow:
+## Acts
 
 | At | Act | What it shows |
 | --- | --- | --- |
-| 0:00 | Logo | Mark, wordmark, "Always-On Idea Capture" |
-| 0:04 | The problem | Empty state. Nothing captured yet. Buffer climbing |
-| 0:10 | One button | KEEP LAST. The clip lands. Nothing was armed |
-| 0:18 | Pick your unit | 1/2/4/8 BARS, 15/30/60 SEC, PHRASE — each selected |
-| 0:28 | PHRASE | The card, the confidence, the capture that follows the idea |
-| 0:36 | It cleans up | AUTO TRIM / SILENCE / ZERO-CROSS / FADE toggled live |
-| 0:46 | It knows the key | Key and BPM readouts filling in |
-| 0:52 | Restart | KEEP, and the buffer clock drops to 0:00 |
-| 0:58 | The rack | Eight keeps, rename, star, delete, undo |
-| 1:08 | Out | Drag to DAW, SAVE WAV, destinations |
-| 1:16 | Price card | Free. VST3 / AU / Standalone. Mac + Windows |
+| 0:00 | Logo opener | Mark, wordmark, the thesis line |
+| 0:05 | Already listening | The full interface, empty, buffer filling |
+| 0:11 | KEEP LAST | The first capture lands - four bars, trimmed, key-labelled |
+| 0:18 | Choose your unit | Every length button cycled: bars, seconds, PHRASE |
+| 0:27 | Fill the rack | Seven more captures - all eight slots, each a different waveform |
+| 0:45 | Trim | The handles dragged across the capture, then committed |
+| 0:56 | Rename | Typed in place on the card |
+| 1:05 | Recovery tools | NORMALIZE, AUTO TRIM and SILENCE DETECT toggled live |
+| 1:14 | Out of the plug-in | SAVE WAV, then DRAG TO DAW |
+| 1:20 | The clock restarts | A capture, and the buffer clock drops to 0:00 |
+| 1:26 | Closer | Formats and price |
 
-`uishot`'s `frames=` and `keepat=` flags already drive everything above; the
-missing piece is a caption/act layer over the frames.
+Everything is the real plug-in. `uishot`-style button handlers are invoked
+directly, the capture engine runs on its worker thread, and the frame loop
+drains it the moment it finishes - so the time the plug-in spends working on
+screen is the time it really takes.
+
+**DRAG TO DAW is shown, not performed.** A real OS drag cannot be driven from a
+headless renderer, so that beat displays the control and says what it does.
+Demo WAVs are written to a temp folder, never the user's captures folder.
+
+## Rendering it
+
+```bash
+make film
+build/tools/film out.mp4 fps=30 seconds=93 audio=beat.wav audiostart=12 still=40
+afconvert -f m4af -d aac -b 192000 beat.wav beat.m4a
+build/tools/mux Marketing/video/KeepThat-Demo.mp4 out.mp4 beat.m4a start=12
+build/tools/grab Marketing/video/KeepThat-Demo.mp4 Marketing/video-stills 2 8 14 22 32 40 48 58 68 78 88
+```
+
+About seven minutes for the film, eight seconds for the mux.
+
+**Why video and audio are separate steps.** An AVAssetWriter with a video and
+an audio input throttles whichever one is behind: appending all the frames and
+then the audio wedges the video input in a sleep loop for ever, and
+hand-interleaving them stalled too. One input never stalls, so the renderer
+writes video only and `mux` composites the audio on afterwards by passthrough -
+no re-encode, which is why that step takes seconds.

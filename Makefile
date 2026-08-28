@@ -446,12 +446,17 @@ $(TOOLS)/uishot: $(PLUG_OBJS) $(ROOT)/tools/UIShot.cpp $(ROOT)/JucePluginDefines
 	   -c $(ROOT)/tools/UIShot.cpp -o $(TOOLS)/UIShot.o
 	@$(CXX) $(PLUG_OBJS) $(TOOLS)/UIShot.o $(LDFLAGS_BASE) -o $@
 
-$(TOOLS)/film: $(PLUG_OBJS) $(ROOT)/tools/Film.cpp $(ROOT)/JucePluginDefines.h
+# Objective-C++: the film tool encodes H.264 itself through AVFoundation
+# rather than writing an image sequence for a second tool to read back.
+$(TOOLS)/film: $(PLUG_OBJS) $(ROOT)/tools/Film.mm $(ROOT)/JucePluginDefines.h
 	@mkdir -p $(TOOLS)
-	@echo "  CXX [tools]      Film.cpp"
-	@$(CXX) $(CXXFLAGS) -DJUCE_STANDALONE_APPLICATION=0 -DJucePlugin_Build_Standalone=0 \
-	   -c $(ROOT)/tools/Film.cpp -o $(TOOLS)/Film.o
-	@$(CXX) $(PLUG_OBJS) $(TOOLS)/Film.o $(LDFLAGS_BASE) -o $@
+	@echo "  OBJCXX [tools]   Film.mm"
+	@$(CXX) $(CXXFLAGS) -ObjC++ -fobjc-arc \
+	   -DJUCE_STANDALONE_APPLICATION=0 -DJucePlugin_Build_Standalone=0 \
+	   -c $(ROOT)/tools/Film.mm -o $(TOOLS)/Film.o
+	@$(CXX) $(PLUG_OBJS) $(TOOLS)/Film.o $(LDFLAGS_BASE) \
+	   -framework AVFoundation -framework CoreMedia -framework CoreVideo \
+	   -framework AudioToolbox -o $@
 
 $(TOOLS)/probe: $(PLUG_OBJS) $(ROOT)/tools/Probe.cpp $(ROOT)/JucePluginDefines.h
 	@mkdir -p $(TOOLS)
