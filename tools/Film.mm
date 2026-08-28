@@ -299,15 +299,17 @@ struct MovieWriter
 juce::Rectangle<int> focusFor (double t)
 {
     struct Shot { double from, to; int x, y, w, h; };
+    // Crops are kept near 2:1 or squarer. Anything much wider becomes a thin
+    // strip in a 9:16 slot and defeats the point of zooming in at all.
     static const Shot shots[] = {
-        {  0.0, 18.0,    0,   0, 1491, 1055 },   // the whole thing
-        { 18.0, 27.0,  410,  60,  700,  560 },   // HUD + KEEP LAST + lengths
-        { 27.0, 45.0,    8, 570, 1230,  330 },   // capture preview + the rack
-        { 45.0, 56.0,   10, 575, 1180,  200 },   // the waveform, for trimming
-        { 56.0, 65.0,    8, 740, 1230,  165 },   // the keeps rack, for renaming
-        { 65.0, 74.0, 1075, 100,  420,  500 },   // recovery tools
-        { 74.0, 83.0, 1150, 570,  340,  330 },   // export destinations
-        { 83.0, 999.0,   0,   0, 1491, 1055 },   // back to the whole thing
+        {  0.0, 18.0,  430,  70,  660,  520 },   // HUD, KEEP LAST and lengths
+        { 18.0, 27.0,  470, 380,  580,  200 },   // the capture-length buttons
+        { 27.0, 45.0,    8, 735,  700,  170 },   // the keeps rack filling up
+        { 45.0, 56.0,  120, 578,  660,  195 },   // the waveform, for trimming
+        { 56.0, 65.0,    8, 735,  560,  170 },   // a keep card, for renaming
+        { 65.0, 74.0, 1080, 105,  410,  480 },   // recovery tools
+        { 74.0, 83.0, 1145, 575,  345,  325 },   // export destinations
+        { 83.0, 999.0, 430,  70,  660,  520 },   // back to the HUD
     };
     for (const auto& s : shots)
         if (t >= s.from && t < s.to)
@@ -619,31 +621,36 @@ int main (int argc, char** argv)
                 g.setOpacity (1.0f);
                 g.drawImage (plugin, dx, dy, dw, dh, 0, 0, Design::width, Design::height);
 
-                // The detail, underneath.
+                // The feature showcase, entirely BELOW the interface.
+                //
+                // Nothing is drawn over the plug-in - it was previously
+                // outlined to show where the detail came from, and that box
+                // sat on top of the controls it was meant to be pointing at.
+                // The showcase has to be readable without covering anything.
                 auto det = focusFor (now);
-                const int detW = W - 48;
-                const int detH = juce::jmin (430, (int) std::lround (
-                                    detW * (double) det.getHeight() / det.getWidth()));
-                const int detX = 24, detY = dy + dh + 46;
+                const double aspect = (double) det.getWidth() / det.getHeight();
+
+                // Fit inside the slot BOTH ways. Capping the height alone left
+                // the width untouched and squashed the picture - a 700x560
+                // crop of the HUD was coming out at half its proper height.
+                const int slotW = W - 48;
+                const int slotH = H - (dy + dh + 46) - 470;   // above the caption
+                int detW = slotW, detH = (int) std::lround (slotW / aspect);
+                if (detH > slotH)
+                {
+                    detH = slotH;
+                    detW = (int) std::lround (slotH * aspect);
+                }
+                const int detX = (W - detW) / 2;
+                const int detY = dy + dh + 46 + (slotH - detH) / 2;
 
                 g.setColour (juce::Colour (0xff0b1017));
-                g.fillRect (detX - 2, detY - 2, detW + 4, detH + 4);
-                g.setColour (tokens::accentCyan.withAlpha (0.35f));
-                g.drawRect (detX - 2, detY - 2, detW + 4, detH + 4, 1);
+                g.fillRect (detX - 3, detY - 3, detW + 6, detH + 6);
+                g.setColour (tokens::accentCyan.withAlpha (0.45f));
+                g.drawRect (detX - 3, detY - 3, detW + 6, detH + 6, 2);
                 g.setOpacity (1.0f);
                 g.drawImage (plugin, detX, detY, detW, detH,
                              det.getX(), det.getY(), det.getWidth(), det.getHeight());
-
-                // Where that detail lives, marked on the full view above.
-                const float mx = dx + dw * (float) det.getX() / Design::width;
-                const float my = dy + dh * (float) det.getY() / Design::height;
-                const float mw = dw * (float) det.getWidth() / Design::width;
-                const float mh = dh * (float) det.getHeight() / Design::height;
-                if (det.getWidth() < Design::width)
-                {
-                    g.setColour (tokens::accentCyan.withAlpha (0.85f));
-                    g.drawRect (mx, my, mw, mh, 2.0f);
-                }
             }
             else
             {

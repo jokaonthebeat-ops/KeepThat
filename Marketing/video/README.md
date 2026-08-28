@@ -6,10 +6,11 @@
 | `KeepThat-Reel.mp4` | 1080x1920, 9:16 | 93 s | 55 MB |
 | `KeepThat-Demo.gif` | 720x509, 15 fps | 5 s | 579 KB |
 
-The reel is the same script in vertical. One crop cannot fill 9:16 - every
-panel in this interface is wide - so it stacks the whole instrument for
-context, with a box marking the region in play, over that region blown up so
-it reads on a phone. The bottom ~220 px is left clear for platform UI.
+The reel is the same script in vertical: the whole instrument on top, and the
+panel each act is about blown up BELOW it. Nothing is ever drawn over the
+interface - an earlier cut outlined the region in play on the plug-in itself,
+which put a marker straight on top of the controls it was pointing at. The
+bottom ~220 px is left clear for platform UI.
 
 At 93 s it suits TikTok and YouTube Shorts; Instagram Reels caps at 90, so
 trim it or re-render with `seconds=88`.
