@@ -109,7 +109,7 @@ float easeIn (double t, double d = 0.45)
     return (float) (1.0 - std::pow (1.0 - x, 3.0));
 }
 
-void drawLower (juce::Graphics& g, int W, int H, const Lower& l, double now)
+void drawLower (juce::Graphics& g, int W, int H, const Lower& l, double now, bool reel)
 {
     const double in = now - l.from;
     const double out = l.to - now;
@@ -119,8 +119,13 @@ void drawLower (juce::Graphics& g, int W, int H, const Lower& l, double now)
     if (a <= 0.01f) return;
 
     const float slide = (1.0f - easeIn (in)) * 34.0f;
-    const int x = 72, y = H - 128 + (int) slide;      // inside the caption band
-    const int w = juce::jmin (W - 144, 900), h = 96;
+
+    // A reel is read at arm's length on a phone, so the plate is wider, taller
+    // and set much larger - the landscape sizes shrink to nothing there.
+    const int x = reel ? 44 : 72;
+    const int y = (reel ? H - 430 : H - 128) + (int) slide;
+    const int w = reel ? W - 88 : juce::jmin (W - 144, 900);
+    const int h = reel ? 210 : 96;
 
     juce::Graphics::ScopedSaveState ss (g);
     g.setOpacity (a);
@@ -135,13 +140,14 @@ void drawLower (juce::Graphics& g, int W, int H, const Lower& l, double now)
     g.setColour (tokens::accentRed);
     g.fillRect (juce::Rectangle<float> (r.getX(), r.getY() + 8.0f, 3.0f, r.getHeight() - 16.0f));
 
-    auto text = r.reduced (26.0f, 16.0f);
+    auto text = r.reduced (reel ? 34.0f : 26.0f, reel ? 26.0f : 16.0f);
     g.setColour (tokens::textPrimary);
-    g.setFont (Fonts::panelTitle().withHeight (30.0f));
-    g.drawText (l.title, text.removeFromTop (36.0f), juce::Justification::centredLeft, false);
+    g.setFont (Fonts::panelTitle().withHeight (reel ? 52.0f : 30.0f));
+    g.drawText (l.title, text.removeFromTop (reel ? 62.0f : 36.0f),
+                juce::Justification::centredLeft, false);
     g.setColour (tokens::textSecond);
-    g.setFont (Fonts::small().withHeight (18.0f));
-    g.drawText (l.sub, text, juce::Justification::topLeft, false);
+    g.setFont (Fonts::small().withHeight (reel ? 30.0f : 18.0f));
+    g.drawFittedText (l.sub, text.toNearestInt(), juce::Justification::topLeft, 3);
 }
 
 /** Opener and closer share a card so the film starts and ends on the same
@@ -284,6 +290,31 @@ struct MovieWriter
     }
 };
 
+/** Which part of the interface a vertical cut should be looking at.
+
+    A phone showing the whole 1491 px editor puts every label under six pixels
+    tall - unreadable, and the point of a reel is that it reads at arm's length
+    while scrolling. So each act zooms to the panel it is actually about, and
+    only the opening and closing beats show the whole instrument. */
+juce::Rectangle<int> focusFor (double t)
+{
+    struct Shot { double from, to; int x, y, w, h; };
+    static const Shot shots[] = {
+        {  0.0, 18.0,    0,   0, 1491, 1055 },   // the whole thing
+        { 18.0, 27.0,  410,  60,  700,  560 },   // HUD + KEEP LAST + lengths
+        { 27.0, 45.0,    8, 570, 1230,  330 },   // capture preview + the rack
+        { 45.0, 56.0,   10, 575, 1180,  200 },   // the waveform, for trimming
+        { 56.0, 65.0,    8, 740, 1230,  165 },   // the keeps rack, for renaming
+        { 65.0, 74.0, 1075, 100,  420,  500 },   // recovery tools
+        { 74.0, 83.0, 1150, 570,  340,  330 },   // export destinations
+        { 83.0, 999.0,   0,   0, 1491, 1055 },   // back to the whole thing
+    };
+    for (const auto& s : shots)
+        if (t >= s.from && t < s.to)
+            return { s.x, s.y, s.w, s.h };
+    return { 0, 0, 1491, 1055 };
+}
+
 // ------------------------------------------------------------------- main ---
 int main (int argc, char** argv)
 {
@@ -297,6 +328,7 @@ int main (int argc, char** argv)
     int fps = 30, W = 1920, H = 1080;
     double totalSeconds = 93.0, audioStart = 0.0;   // audiostart skips an intro
     double stillAt = -1.0;                          // still=SEC dumps one PNG
+    bool reel = false;                              // shape=reel -> 1080x1920
     juce::File audioFile;
 
     for (int i = 2; i < argc; ++i)
@@ -307,6 +339,7 @@ int main (int argc, char** argv)
         else if (a.startsWith ("audio="))   audioFile = juce::File (a.fromFirstOccurrenceOf ("=", false, false));
         else if (a.startsWith ("audiostart=")) audioStart = a.fromFirstOccurrenceOf ("=", false, false).getDoubleValue();
         else if (a.startsWith ("still="))   stillAt = a.fromFirstOccurrenceOf ("=", false, false).getDoubleValue();
+        else if (a == "shape=reel")         reel = true;
         else if (a.startsWith ("size="))
         {
             auto s = a.fromFirstOccurrenceOf ("=", false, false);
@@ -314,6 +347,8 @@ int main (int argc, char** argv)
             H = s.fromFirstOccurrenceOf ("x", false, false).getIntValue();
         }
     }
+
+    if (reel) { W = 1080; H = 1920; }
 
     const int samplesPerFrame = (int) std::llround (kRate / fps);
     const int totalFrames = (int) std::llround (totalSeconds * fps);
@@ -553,20 +588,88 @@ int main (int argc, char** argv)
             g.setGradientFill (halo);
             g.fillAll();
 
-            const int band = 132, top = 20;
-            const float sc = juce::jmin ((W - 120.0f) / Design::width,
-                                         (H - band - top - 12.0f) / Design::height);
-            const int dw = (int) (Design::width * sc), dh = (int) (Design::height * sc);
-            const int dx = (W - dw) / 2, dy = top;
+            juce::Rectangle<int> src (0, 0, Design::width, Design::height);
+            int dx, dy, dw, dh;
 
-            g.setColour (juce::Colours::black.withAlpha (0.55f));
-            g.fillRect (dx - 2, dy - 2, dw + 4, dh + 4);
-            g.drawImage (plugin, juce::Rectangle<float> ((float) dx, (float) dy,
-                                                         (float) dw, (float) dh),
-                         juce::RectanglePlacement::stretchToFit);
+            if (reel)
+            {
+                // Every panel in this interface is wide, so one crop can never
+                // fill a 9:16 frame - it just leaves a letterboxed strip in a
+                // tall empty screen. Two stacked images do fill it, and they
+                // do a better job anyway: the whole instrument on top so the
+                // viewer knows what they are looking at, and the panel the act
+                // is actually about blown up underneath so it reads on a phone.
+                if (Assets::has ("logo.png"))
+                {
+                    const auto& logo = Assets::image ("logo.png");
+                    const float lw = W * 0.62f;
+                    const float lh = lw * (float) logo.getHeight() / (float) logo.getWidth();
+                    g.setOpacity (1.0f);
+                    g.drawImage (logo, juce::Rectangle<float> ((W - lw) * 0.5f, 74.0f, lw, lh),
+                                 juce::RectanglePlacement::centred);
+                }
+
+                dw = W - 48;
+                dh = (int) std::lround (dw * (double) Design::height / Design::width);
+                dx = 24;
+                dy = 268;
+
+                g.setColour (juce::Colours::black.withAlpha (0.55f));
+                g.fillRect (dx - 2, dy - 2, dw + 4, dh + 4);
+                g.setOpacity (1.0f);
+                g.drawImage (plugin, dx, dy, dw, dh, 0, 0, Design::width, Design::height);
+
+                // The detail, underneath.
+                auto det = focusFor (now);
+                const int detW = W - 48;
+                const int detH = juce::jmin (430, (int) std::lround (
+                                    detW * (double) det.getHeight() / det.getWidth()));
+                const int detX = 24, detY = dy + dh + 46;
+
+                g.setColour (juce::Colour (0xff0b1017));
+                g.fillRect (detX - 2, detY - 2, detW + 4, detH + 4);
+                g.setColour (tokens::accentCyan.withAlpha (0.35f));
+                g.drawRect (detX - 2, detY - 2, detW + 4, detH + 4, 1);
+                g.setOpacity (1.0f);
+                g.drawImage (plugin, detX, detY, detW, detH,
+                             det.getX(), det.getY(), det.getWidth(), det.getHeight());
+
+                // Where that detail lives, marked on the full view above.
+                const float mx = dx + dw * (float) det.getX() / Design::width;
+                const float my = dy + dh * (float) det.getY() / Design::height;
+                const float mw = dw * (float) det.getWidth() / Design::width;
+                const float mh = dh * (float) det.getHeight() / Design::height;
+                if (det.getWidth() < Design::width)
+                {
+                    g.setColour (tokens::accentCyan.withAlpha (0.85f));
+                    g.drawRect (mx, my, mw, mh, 2.0f);
+                }
+            }
+            else
+            {
+                const int band = 132, top = 20;
+                const float sc = juce::jmin ((W - 120.0f) / Design::width,
+                                             (H - band - top - 12.0f) / Design::height);
+                dw = (int) (Design::width * sc); dh = (int) (Design::height * sc);
+                dx = (W - dw) / 2; dy = top;
+            }
+
+            if (! reel)
+            {
+                g.setColour (juce::Colours::black.withAlpha (0.55f));
+                g.fillRect (dx - 2, dy - 2, dw + 4, dh + 4);
+
+                // MUST reset the opacity before drawing the interface. In JUCE
+                // the fill colour's alpha is what drawImage uses as its
+                // opacity, so the 0.55 set for the shadow above was also being
+                // applied to the plug-in - the film came out at half brightness.
+                g.setOpacity (1.0f);
+                g.drawImage (plugin, dx, dy, dw, dh,
+                             src.getX(), src.getY(), src.getWidth(), src.getHeight());
+            }
 
             for (const auto& l : lowers)
-                drawLower (g, W, H, l, now);
+                drawLower (g, W, H, l, now, reel);
 
             if (now < openerEnd)
             {

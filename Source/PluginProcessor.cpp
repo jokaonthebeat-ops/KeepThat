@@ -190,7 +190,18 @@ bool KeepThatProcessor::captureLast (CaptureLength length)
 
 void KeepThatProcessor::scanForPhrase()
 {
-    captureEngine.requestPhraseScan (ring, 10.0, hostTiming(), settings());
+    // 24 seconds, not 10. Phrase detection is happy with a short window - it
+    // is looking for the last idea - but the same job also feeds KEY and
+    // TEMPO on its deep pass, and ten seconds is simply not enough onset
+    // history to fix a tempo. Measured against a 150 BPM track: a 10 s window
+    // reported ~100 BPM every time (the two-thirds level), 15 s got it right
+    // half the time, and 24 s got it right consistently. The window was the
+    // whole difference - the detector was fine.
+    //
+    // It costs nothing extra in practice: the deep pass runs on every fourth
+    // scan, so this is a longer FFT sweep every twelve seconds on a worker
+    // thread, and the audio thread never sees it.
+    captureEngine.requestPhraseScan (ring, 24.0, hostTiming(), settings());
 }
 
 bool KeepThatProcessor::perform (juce::UndoableAction* action, const juce::String& name)
