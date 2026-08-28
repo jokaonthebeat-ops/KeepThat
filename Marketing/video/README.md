@@ -2,8 +2,17 @@
 
 | File | Shape | Length | Size |
 | --- | --- | --- | --- |
-| `KeepThat-Demo.mp4` | 1920x1080, 16:9 | 93 s | 72 MB |
+| `KeepThat-Demo.mp4` | 1920x1080, 16:9 | 93 s | 79 MB |
+| `KeepThat-Reel.mp4` | 1080x1920, 9:16 | 93 s | 55 MB |
 | `KeepThat-Demo.gif` | 720x509, 15 fps | 5 s | 579 KB |
+
+The reel is the same script in vertical. One crop cannot fill 9:16 - every
+panel in this interface is wide - so it stacks the whole instrument for
+context, with a box marking the region in play, over that region blown up so
+it reads on a phone. The bottom ~220 px is left clear for platform UI.
+
+At 93 s it suits TikTok and YouTube Shorts; Instagram Reels caps at 90, so
+trim it or re-render with `seconds=88`.
 
 H.264 at 12 Mbit, 30 fps, with AAC audio.
 

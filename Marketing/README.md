@@ -16,8 +16,10 @@ reading live audio. Nothing here is a mockup.
 | `screenshots/*-1491.png` | Masters at the design size (1491×1055) |
 | `screenshots/web/*.jpg` | Quality-84 JPEGs at 1600 px for web use |
 | `video/KeepThat-Demo.mp4` | 93 s demo film, 1920×1080, 30 fps, H.264 + AAC |
+| `video/KeepThat-Reel.mp4` | The same film vertical, 1080×1920, for reels |
 | `video/KeepThat-Demo.gif` | The same take as a looping GIF, 579 KB, for READMEs |
 | `video-stills/` | One frame per act, pulled from the film with `tools/grab` |
+| `video-stills/reel/` | The same moments from the vertical cut |
 | `logo/` | App icon at 1024 and 512, the `.icns`, and the wordmark |
 
 ## The screenshots
