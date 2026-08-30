@@ -24,7 +24,7 @@
 # =============================================================================
 
 PROJECT      := KeepThat
-VERSION      := 0.9.0
+VERSION      := 0.9.1
 # Overridable: `make JUCE_DIR=/path/to/JUCE`, or export it. The fallback list
 # means a fresh clone builds without anyone editing this file - which matters
 # now that the repository is not just on the machine it was written on.

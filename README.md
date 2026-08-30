@@ -76,7 +76,7 @@ Windows binaries are built in CI, because the development machine is a Mac with
 no Windows toolchain. Push a tag and the workflow builds and attaches them:
 
 ```bash
-git tag v0.9.0 && git push origin v0.9.0
+git tag v0.9.1 && git push origin v0.9.1
 ```
 
 Locally on a Windows box:
