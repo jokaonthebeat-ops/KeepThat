@@ -26,17 +26,28 @@ KeepThatProcessor::KeepThatProcessor()
             state.bpm = t.bpm;
     };
 
-    clipLoader.onLoaded = [this] (juce::int64 id,
-                                  std::shared_ptr<juce::AudioBuffer<float>> audio,
-                                  double rate)
+    clipLoader.onLoaded = [this] (juce::int64 id, ClipLoader::LoadedClip loaded)
     {
         auto* clip = state.findById (id);
         if (clip == nullptr)
             return;                       // deleted while the disk was busy
 
-        clip->audio = std::move (audio);
-        clip->sampleRate = rate;
-        clip->seconds = clip->audio->getNumSamples() / juce::jmax (1.0, rate);
+        clip->audio = std::move (loaded.audio);
+        clip->sampleRate = loaded.sampleRate;
+        clip->seconds = clip->audio->getNumSamples() / juce::jmax (1.0, loaded.sampleRate);
+
+        // Fill in whatever this clip is missing - a keep restored from an old
+        // session arrived as bare metadata. Only MISSING fields: a key that
+        // was detected at capture time is not second-guessed by a re-read.
+        if (clip->thumbLo.empty())
+        {
+            clip->thumbLo = std::move (loaded.thumbLo);
+            clip->thumbHi = std::move (loaded.thumbHi);
+        }
+        if (clip->peakDb <= -99.0f)
+            clip->peakDb = loaded.peakDb;
+        if (clip->key == "--" && loaded.key.detected)
+            clip->key = loaded.key.describe();
 
         // Only refresh the preview if this is still the clip on screen.
         if (state.selectedKeep >= 0 && state.selectedKeep < (int) state.keeps.size()
@@ -293,6 +304,12 @@ void KeepThatProcessor::getStateInformation (juce::MemoryBlock& destData)
     session.setProperty ("selectedSeconds", state.selectedSeconds, nullptr);
     session.setProperty ("destination", (int) state.destination, nullptr);
     session.setProperty ("showBarsBeats", state.showBarsBeats, nullptr);
+    session.setProperty ("selectedKeep", state.selectedKeep, nullptr);
+    // The SETTINGS toggles. Not persisting these meant every one of them
+    // quietly reset each time the session reopened.
+    session.setProperty ("lowPowerMode", state.lowPowerMode, nullptr);
+    session.setProperty ("reduceMotion", state.reduceMotion, nullptr);
+    session.setProperty ("writePlaylistFile", state.writePlaylistFile, nullptr);
     for (int i = 0; i < 5; ++i)
         if (state.destinationFolder[i] != juce::File())
             session.setProperty ("destFolder" + juce::String (i),
@@ -312,6 +329,9 @@ void KeepThatProcessor::getStateInformation (juce::MemoryBlock& destData)
         k.setProperty ("favourite", clip.favourite, nullptr);
         k.setProperty ("file", clip.file.getFullPathName(), nullptr);
         k.setProperty ("createdAt", clip.createdAtMs, nullptr);
+        k.setProperty ("key", clip.key, nullptr);
+        k.setProperty ("bars", clip.detectedBars, nullptr);
+        k.setProperty ("peakDb", clip.peakDb, nullptr);
         keeps.appendChild (k, nullptr);
     }
     session.appendChild (keeps, nullptr);
@@ -343,6 +363,9 @@ void KeepThatProcessor::setStateInformation (const void* data, int sizeInBytes)
     state.destination     = (Destination) (int) session.getProperty ("destination",
                                                                      (int) state.destination);
     state.showBarsBeats   = session.getProperty ("showBarsBeats", state.showBarsBeats);
+    state.lowPowerMode    = session.getProperty ("lowPowerMode", state.lowPowerMode);
+    state.reduceMotion    = session.getProperty ("reduceMotion", state.reduceMotion);
+    state.writePlaylistFile = session.getProperty ("writePlaylistFile", state.writePlaylistFile);
     for (int i = 0; i < 5; ++i)
     {
         const auto path = session.getProperty ("destFolder" + juce::String (i)).toString();
@@ -366,6 +389,9 @@ void KeepThatProcessor::setStateInformation (const void* data, int sizeInBytes)
         clip.favourite = k.getProperty ("favourite");
         clip.file = juce::File (k.getProperty ("file").toString());
         clip.createdAtMs = k.getProperty ("createdAt");
+        clip.key = k.getProperty ("key", "--").toString();
+        clip.detectedBars = k.getProperty ("bars", 0.0);
+        clip.peakDb = k.getProperty ("peakDb", -100.0f);
         clip.id = state.nextClipId++;
         if (clip.file.existsAsFile())
             restored.push_back (std::move (clip));
@@ -373,7 +399,8 @@ void KeepThatProcessor::setStateInformation (const void* data, int sizeInBytes)
     if (! restored.empty())
     {
         state.keeps = std::move (restored);
-        state.selectedKeep = 0;
+        state.selectedKeep = juce::jlimit (0, (int) state.keeps.size() - 1,
+                                (int) session.getProperty ("selectedKeep", 0));
     }
 }
 

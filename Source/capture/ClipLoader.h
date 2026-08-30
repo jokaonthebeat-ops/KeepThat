@@ -21,6 +21,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "CaptureModel.h"
+#include "KeyDetector.h"
 
 namespace keepthat
 {
@@ -40,9 +41,21 @@ public:
     /** True while `token` is still being read. */
     bool isLoading (juce::int64 token) const;
 
+    /** Everything the worker learned about the clip while it had the audio
+        in hand anyway. Computed on the LOADER thread, because a key detection
+        is a few hundred FFTs and doing that on the message thread once per
+        restored card is a visible stutter. */
+    struct LoadedClip
+    {
+        std::shared_ptr<juce::AudioBuffer<float>> audio;
+        double sampleRate = 0.0;
+        std::vector<float> thumbLo, thumbHi;
+        float peakDb = -100.0f;
+        KeyResult key;
+    };
+
     /** MESSAGE THREAD. */
-    std::function<void (juce::int64 token, std::shared_ptr<juce::AudioBuffer<float>>,
-                        double sampleRate)> onLoaded;
+    std::function<void (juce::int64 token, LoadedClip)> onLoaded;
 
     /** MESSAGE THREAD, when a file could not be read. */
     std::function<void (juce::int64 token, juce::String reason)> onFailed;
@@ -58,8 +71,7 @@ private:
     struct Loaded
     {
         juce::int64 token;
-        std::shared_ptr<juce::AudioBuffer<float>> audio;
-        double sampleRate = 0.0;
+        LoadedClip clip;
         juce::String failure;
     };
 

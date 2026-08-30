@@ -416,8 +416,13 @@ struct SessionState
     bool   stereo = true;
     juce::String inputQuality { "--" };
 
+    // ONE selection across the whole table (0-3 bars, 4-6 seconds, 7 phrase).
+    // These used to be two independent picks, one per row - and the capture
+    // only ever read the bars one, so pressing "60 SEC" changed nothing and
+    // both rows sat lit at once. selectedSeconds remains only so old presets
+    // and sessions still parse.
     int selectedLength = 2;                // "4 BARS"
-    int selectedSeconds = 5;               // "30 SEC" - the second row's pick
+    int selectedSeconds = 5;               // legacy - superseded by selectedLength
 
     PhraseVerdict phrase;
 

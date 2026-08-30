@@ -183,6 +183,19 @@ public:
         clock.stop();
         clock.start (s.lowPowerMode ? 30 : 60);
         hud.setReduceMotion (s.reduceMotion);
+        appliedLowPower = s.lowPowerMode;
+        appliedReduceMotion = s.reduceMotion;
+    }
+
+    /** Hosts restore state whenever they like - often AFTER the editor is
+        built - and the constructor's applyPerformanceMode has run by then.
+        Watching for the change each frame keeps a restored low-power or
+        reduce-motion choice from being silently ignored for the session. */
+    void followPerformanceMode()
+    {
+        const auto& s = processor.session();
+        if (s.lowPowerMode != appliedLowPower || s.reduceMotion != appliedReduceMotion)
+            applyPerformanceMode();
     }
 
     /** Pushes session-level choices back onto the controls after a preset
@@ -234,6 +247,7 @@ public:
 
     void frame (double dt)
     {
+        followPerformanceMode();
         // Message-thread housekeeping: frees buffers the audio thread handed
         // back, refreshes the buffer clock, and keeps phrase detection current.
         processor.tickMessageThread();
@@ -316,9 +330,11 @@ private:
         // of the rolling buffer, on a worker, and hand back a real clip.
         const auto& s = processor.session();
         const auto& table = captureLengths();
-        const int index = juce::jlimit (0, (int) table.size() - 1,
-                                        s.selectedLength >= 4 ? s.selectedSeconds
-                                                              : s.selectedLength);
+        // selectedLength is the single selection across the whole table now.
+        // The old expression consulted selectedSeconds only when
+        // selectedLength >= 4 - which nothing ever set, so the seconds row
+        // was decoration and "60 SEC" captured four bars.
+        const int index = juce::jlimit (0, (int) table.size() - 1, s.selectedLength);
         if (! processor.captureLast (table[(size_t) index]))
             footer.flashMessage (processor.session().lastMessage);
     }
@@ -470,6 +486,7 @@ private:
     }
 
     KeepThatProcessor& processor;
+    bool appliedLowPower = false, appliedReduceMotion = false;
 
     HeaderComponent header;
     LiveInputPanel liveInput;

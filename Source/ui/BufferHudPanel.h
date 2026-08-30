@@ -74,9 +74,9 @@ public:
     void syncSelection()
     {
         const auto& s = processor.session();
+        // Exactly one button lit - the one KEEP LAST will actually use.
         for (int i = 0; i < lengthButtons.size(); ++i)
-            lengthButtons[i]->setSelected (i < 4 ? i == s.selectedLength
-                                                 : i == s.selectedSeconds);
+            lengthButtons[i]->setSelected (i == s.selectedLength);
     }
 
     void resized() override
@@ -276,8 +276,12 @@ private:
     void selectLength (int index)
     {
         auto& s = processor.session();
-        if (index < 4) s.selectedLength = index;
-        else           s.selectedSeconds = index;
+        // One choice across both rows: picking a seconds length REPLACES the
+        // bars pick, because that is what pressing it means. Two lit rows was
+        // not a style - the seconds row simply never took effect.
+        s.selectedLength = index;
+        if (index >= 4)
+            s.selectedSeconds = index;     // kept in step for old sessions
         syncSelection();
         if (onLengthChanged) onLengthChanged (index);
     }

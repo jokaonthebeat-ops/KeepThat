@@ -467,8 +467,8 @@ static void testClipLoader()
     double gotRate = 0.0;
     juce::String failure;
 
-    loader.onLoaded = [&] (juce::int64 t, std::shared_ptr<juce::AudioBuffer<float>> a, double r)
-    { gotToken = t; gotAudio = std::move (a); gotRate = r; };
+    loader.onLoaded = [&] (juce::int64 t, ClipLoader::LoadedClip c)
+    { gotToken = t; gotAudio = std::move (c.audio); gotRate = c.sampleRate; };
     loader.onFailed = [&] (juce::int64, juce::String why) { failure = why; };
 
     loader.request (42, file, true);
@@ -866,6 +866,195 @@ static void testDragIsAHoldGesture()
     check (! dragged, "a two-pixel wobble is not a drag");
 }
 
+static void testStateRoundTrip()
+{
+    std::printf ("\nstate round-trip\n");
+
+    // A keep only survives serialization if its WAV exists on disk.
+    auto dir = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                   .getChildFile ("KeepThatStateTest");
+    dir.createDirectory();
+    auto wav = dir.getChildFile ("roundtrip.wav");
+
+    KeepThatProcessor a;
+    a.setPlayConfigDetails (2, 2, kRate, 512);
+    a.prepareToPlay (kRate, 512);
+
+    CaptureClip clip;
+    clip.name = "Round Trip";
+    clip.key = "A# Minor";
+    clip.detectedBars = 4.0;
+    clip.peakDb = -3.5f;
+    clip.favourite = true;
+    clip.audio = std::make_shared<juce::AudioBuffer<float>> (
+                     join ({ chord (1.0, 58, { 0, 3, 7 }) }));   // A# minor triad
+    clip.sampleRate = kRate;
+    clip.seconds = clip.audio->getNumSamples() / kRate;
+    check (WavExporter::writeWav (clip, wav), "the round-trip WAV was written");
+    clip.file = wav;
+    a.session().keeps.push_back (clip);
+
+    a.session().lowPowerMode = true;
+    a.session().reduceMotion = true;
+    a.session().writePlaylistFile = false;
+    a.session().restartBufferAfterKeep = false;
+
+    juce::MemoryBlock blob;
+    a.getStateInformation (blob);
+
+    KeepThatProcessor b;
+    b.setPlayConfigDetails (2, 2, kRate, 512);
+    b.prepareToPlay (kRate, 512);
+    b.setStateInformation (blob.getData(), (int) blob.getSize());
+
+    auto& s = b.session();
+    check (s.keeps.size() == 1, "the keep survived the round trip");
+    if (s.keeps.size() == 1)
+    {
+        // These were silently dropped before: every restored keep came back
+        // with key "--", no bar count and no peak.
+        check (s.keeps[0].key == "A# Minor", "the keep's KEY survives",
+               "got " + s.keeps[0].key);
+        checkNear (s.keeps[0].detectedBars, 4.0, 1.0e-9, "the bar count survives");
+        checkNear ((double) s.keeps[0].peakDb, -3.5, 1.0e-4, "the peak level survives");
+        check (s.keeps[0].favourite, "favourite survives");
+    }
+
+    // The SETTINGS toggles reset every session before this.
+    check (s.lowPowerMode, "low power mode survives");
+    check (s.reduceMotion, "reduce motion survives");
+    check (! s.writePlaylistFile, "the playlist toggle survives");
+    check (! s.restartBufferAfterKeep, "the buffer-restart choice survives");
+
+    wav.deleteFile();
+}
+
+static void testLoaderRecoversMetadata()
+{
+    std::printf ("\nloader recovers missing metadata\n");
+
+    auto dir = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                   .getChildFile ("KeepThatStateTest");
+    dir.createDirectory();
+    auto wav = dir.getChildFile ("legacy.wav");
+
+    // A "legacy" keep: audio on disk, but captured before key/thumb/peak were
+    // persisted - which is exactly what a restored old session looks like.
+    CaptureClip seed;
+    seed.audio = std::make_shared<juce::AudioBuffer<float>> (
+                     join ({ chord (1.0, 60, { 0, 4, 7 }),        // C major
+                             chord (1.0, 60, { 5, 9, 12 }),
+                             chord (1.0, 60, { 7, 11, 14 }) }));
+    seed.sampleRate = kRate;
+    check (WavExporter::writeWav (seed, wav), "the legacy WAV was written");
+
+    KeepThatProcessor p;
+    p.setPlayConfigDetails (2, 2, kRate, 512);
+    p.prepareToPlay (kRate, 512);
+
+    CaptureClip bare;
+    bare.name = "Legacy";
+    bare.file = wav;
+    bare.id = 777;
+    p.session().keeps.push_back (bare);
+    p.session().selectedKeep = 0;
+
+    check (p.session().keeps[0].thumbLo.empty(), "the bare keep has no thumbnail yet");
+    check (p.session().keeps[0].key == "--", "the bare keep has no key yet");
+
+    p.ensureAudio (p.session().keeps[0], true);
+
+    // The loader runs on its own thread; give it a moment, then deliver.
+    bool arrived = false;
+    for (int i = 0; i < 200 && ! arrived; ++i)
+    {
+        juce::Thread::sleep (10);
+        p.loader().drainCompletedForTesting();
+        arrived = p.session().keeps[0].audio != nullptr;
+    }
+
+    check (arrived, "the WAV was read back");
+    check (! p.session().keeps[0].thumbLo.empty(),
+           "a missing thumbnail is rebuilt on load");
+    check (p.session().keeps[0].peakDb > -60.0f,
+           "a missing peak level is measured on load");
+    check (p.session().keeps[0].key != "--",
+           "a missing key is detected on load",
+           "got " + p.session().keeps[0].key);
+
+    wav.deleteFile();
+}
+
+static void testSecondsSelectionActuallyCaptures()
+{
+    std::printf ("\n60 SEC captures sixty seconds\n");
+
+    KeepThatProcessor processor;
+    processor.setPlayConfigDetails (2, 2, kRate, 512);
+    processor.prepareToPlay (kRate, 512);
+    processor.session().restartBufferAfterKeep = false;
+
+    std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
+    if (editor == nullptr) { check (false, "editor created"); return; }
+    editor->setSize (Design::width, Design::height);
+
+    // 70 seconds of tone through the real audio path, so a 60-second capture
+    // has something to be sixty seconds OF.
+    juce::AudioBuffer<float> block (2, 512);
+    juce::MidiBuffer midi;
+    double phase = 0.0;
+    for (int b = 0; b < (int) (kRate * 70.0 / 512.0); ++b)
+    {
+        for (int i = 0; i < 512; ++i)
+        {
+            phase += 2.0 * juce::MathConstants<double>::pi * 220.0 / kRate;
+            const float v = 0.4f * (float) std::sin (phase);
+            block.setSample (0, i, v);
+            block.setSample (1, i, v);
+        }
+        processor.processBlock (block, midi);
+    }
+
+    juce::Array<juce::Button*> buttons;
+    collectButtons (*editor, buttons);
+    auto press = [&buttons] (const juce::String& name)
+    {
+        for (auto* b : buttons)
+            if (b->getName() == name && b->onClick != nullptr)
+            { b->onClick(); return true; }
+        return false;
+    };
+
+    // The bug: pressing 60 SEC changed nothing, because the capture only read
+    // the bars-row selection and nothing could ever switch it off.
+    check (press ("60 SEC"), "the 60 SEC button was pressed");
+    check (processor.session().selectedLength == 6,
+           "pressing 60 SEC selects it for capture",
+           "selectedLength = " + juce::String (processor.session().selectedLength));
+
+    check (press ("KEEP LAST"), "KEEP LAST was pressed");
+    bool arrived = false;
+    for (int i = 0; i < 400 && ! arrived; ++i)
+    {
+        juce::Thread::sleep (10);
+        processor.engine().drainCompletedForTesting();
+        arrived = ! processor.session().keeps.empty();
+    }
+    check (arrived, "the capture completed");
+    if (arrived)
+    {
+        const double got = processor.session().keeps.front().seconds;
+        check (got > 45.0 && got < 62.0,
+               "the capture is actually about sixty seconds long",
+               juce::String (got, 2) + " s");
+    }
+
+    // And bars must win back the selection just as cleanly.
+    check (press ("2 BARS"), "the 2 BARS button was pressed");
+    check (processor.session().selectedLength == 1,
+           "pressing 2 BARS takes the selection back");
+}
+
 static void testEveryButtonIsWired()
 {
     std::printf ("\nbutton wiring\n");
@@ -987,7 +1176,10 @@ int main()
     testBufferClear();
     testExport();
     testProcessorCapture();
+    testStateRoundTrip();
+    testLoaderRecoversMetadata();
     testEveryButtonIsWired();
+    testSecondsSelectionActuallyCaptures();
     testDragIsAHoldGesture();
     testNoAllocationInProcessBlock();
 

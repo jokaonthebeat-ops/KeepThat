@@ -183,7 +183,21 @@ public:
             b->setArtHasLabel (true);           // ...with its own label on it
             addAndMakeVisible (b);
             const auto dest = e.dest;
-            b->onClick = [this, dest] { select (dest); };
+
+            // Selecting a destination also OPENS its folder, so the button
+            // answers "where do my files go" by showing you rather than
+            // leaving you to guess at a path. DAW DRAG is the exception -
+            // it has no folder, the DAW is the destination.
+            b->onClick = [this, dest]
+            {
+                select (dest);
+                if (dest != Destination::dawDrag)
+                {
+                    auto dir = WavExporter::directoryFor (dest, processor.session());
+                    dir.createDirectory();
+                    WavExporter::reveal (dir);
+                }
+            };
 
             // Right-click chooses where this destination writes. That is what
             // makes SAMPLER and PLAYLIST real targets rather than labels

@@ -1,4 +1,5 @@
 #include "ClipLoader.h"
+#include "ClipProcessor.h"
 
 namespace keepthat
 {
@@ -102,8 +103,19 @@ void ClipLoader::run()
                 (int) juce::jmax (1u, reader->numChannels),
                 (int) reader->lengthInSamples);
             reader->read (buffer.get(), 0, buffer->getNumSamples(), 0, true, true);
-            loaded.audio = std::move (buffer);
-            loaded.sampleRate = reader->sampleRate;
+
+            // Analyse while the audio is in hand: the thumbnail, peak and key
+            // for a clip restored from an old session were never persisted (or
+            // predate persisting them), and this thread is the right place to
+            // recover them - it is already off the message thread and already
+            // paid for the disk read. 128 bins matches capture-time thumbnails.
+            clip::buildThumbnail (*buffer, 128, loaded.clip.thumbLo, loaded.clip.thumbHi);
+            loaded.clip.peakDb = juce::Decibels::gainToDecibels (
+                                     clip::peakMagnitude (*buffer), -100.0f);
+            loaded.clip.key = KeyDetector::detect (*buffer, reader->sampleRate);
+
+            loaded.clip.audio = std::move (buffer);
+            loaded.clip.sampleRate = reader->sampleRate;
         }
 
         {
@@ -128,9 +140,9 @@ void ClipLoader::handleAsyncUpdate()
 
     for (auto& r : ready)
     {
-        if (r.audio != nullptr)
+        if (r.clip.audio != nullptr)
         {
-            if (onLoaded) onLoaded (r.token, std::move (r.audio), r.sampleRate);
+            if (onLoaded) onLoaded (r.token, std::move (r.clip));
         }
         else if (onFailed)
         {
