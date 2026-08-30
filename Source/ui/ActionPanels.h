@@ -103,6 +103,7 @@ class CaptureActionColumn : public juce::Component
 public:
     std::function<void()> onRename, onSaveWav;
     std::function<void (juce::Component*)> onDragToDaw;
+    std::function<void()> onDragHint;
 
     CaptureActionColumn()
     {
@@ -124,7 +125,16 @@ public:
             = [this] { if (onSaveWav) onSaveWav(); };
 
         auto* drag = add ("DRAG TO DAW", icons::dragArrow(), tokens::accentGold, "drag_to_daw");
-        drag->onClick = [this, drag] { if (onDragToDaw) onDragToDaw (drag); };
+
+        // Press and pull, the way every other file drag in the OS works. This
+        // used to hang off onClick, which starts the drag on mouse-UP - after
+        // the user has already let go.
+        drag->onDragOut = [this] (juce::Component* c) { if (onDragToDaw) onDragToDaw (c); };
+
+        // A plain click is not a mistake to swallow silently: it is someone
+        // who has not realised it is a drag, so say so.
+        drag->onClick = [this] { if (onDragHint) onDragHint(); };
+        drag->setMouseCursor (juce::MouseCursor::DraggingHandCursor);
 
         // "DRAG TO DAW" is the longest caption in a 62 px column, so it gets a
         // smaller face rather than being clipped to "DRAG TO".

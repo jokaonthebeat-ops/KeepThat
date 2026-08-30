@@ -103,7 +103,17 @@ public:
         actions.onRename = [this] { renameSelected(); };
         actions.onSaveWav = [this] { saveSelected(); };
         actions.onDragToDaw = [this] (juce::Component* c) { dragSelectedToDaw (c); };
+        actions.onDragHint  = [this]
+        { footer.flashMessage ("Hold DRAG TO DAW and pull it onto a track"); };
         keeps.onSelect = [this] (int index) { loadKeep (index); };
+        keeps.onDragOut = [this] (int index, juce::Component* c)
+        {
+            // Dragging a card acts on THAT card, not on whatever happened to
+            // be selected before the press.
+            processor.session().selectedKeep = index;
+            loadKeep (index);
+            dragSelectedToDaw (c);
+        };
         keeps.onChanged = [this] { keeps.repaint(); };
         header.onArmedChanged = [this] { hud.repaint(); liveInput.repaint(); };
         header.onHistoryChanged = [this] (juce::String what)

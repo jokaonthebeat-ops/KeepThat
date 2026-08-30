@@ -25,6 +25,10 @@ public:
     explicit RecentKeepsPanel (KeepThatProcessor& p) : processor (p) {}
 
     std::function<void (int)> onSelect;
+
+    /** Press a card and pull: dragging the clip itself is what most people
+        reach for before they find the DRAG TO DAW button. */
+    std::function<void (int, juce::Component*)> onDragOut;
     std::function<void()> onChanged;
     std::function<void (int)> onPlay;
 
@@ -130,6 +134,8 @@ public:
     void mouseDown (const juce::MouseEvent& e) override
     {
         const int idx = indexAt (e.position);
+        dragStarted = false;
+        dragIndex = (actionAt (e.position) < 0) ? idx : -1;   // not the row of icons
         if (idx < 0)
             return;
 
@@ -167,6 +173,23 @@ public:
             if (onSelect) onSelect (idx);
         }
         repaint();
+    }
+
+    void mouseDrag (const juce::MouseEvent& e) override
+    {
+        if (dragStarted || dragIndex < 0 || onDragOut == nullptr)
+            return;
+        if (e.getDistanceFromDragStart() <= 5)
+            return;                       // still a click, not a drag
+
+        dragStarted = true;
+        onDragOut (dragIndex, this);
+    }
+
+    void mouseUp (const juce::MouseEvent&) override
+    {
+        dragStarted = false;
+        dragIndex = -1;
     }
 
     void mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails& w) override
@@ -372,6 +395,10 @@ private:
     KeepThatProcessor& processor;
     float scroll = 0.0f, scrollTarget = 0.0f;
     int hoverIndex = -1, hoverAction = -1;
+
+    // Which card a press landed on, and whether it has turned into a drag.
+    int dragIndex = -1;
+    bool dragStarted = false;
     int renaming = -1;
     std::unique_ptr<juce::TextEditor> editor;
 

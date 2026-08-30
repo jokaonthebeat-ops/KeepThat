@@ -81,6 +81,15 @@ public:
         a control that already has an obvious primary one. */
     std::function<void()> onSecondaryClick;
 
+    /** Fires while the button is HELD DOWN and the mouse moves - which is the
+        only gesture a file drag can use.
+
+        A drag hung off `onClick` starts on mouse-UP: by then the user has let
+        go, the pointer is back over the plug-in, and there is nothing left to
+        drag onto a track. Everyone expects to press the thing and pull it out,
+        so that is what this does. */
+    std::function<void (juce::Component*)> onDragOut;
+
     void mouseEnter (const juce::MouseEvent& e) override { juce::Button::mouseEnter (e); wake(); }
     void mouseExit  (const juce::MouseEvent& e) override { juce::Button::mouseExit (e);  wake(); }
     void mouseDown  (const juce::MouseEvent& e) override
@@ -90,13 +99,41 @@ public:
             onSecondaryClick();
             return;                       // not also a primary click
         }
+        dragStarted = false;
         glow.start (e.position);
         wake();
         juce::Button::mouseDown (e);
     }
 
+    void mouseDrag (const juce::MouseEvent& e) override
+    {
+        // A few pixels of slop so a press with a shaky hand is still a click.
+        if (onDragOut != nullptr && ! dragStarted && e.getDistanceFromDragStart() > 5)
+        {
+            dragStarted = true;
+            setState (buttonNormal);      // the OS owns the pointer from here
+            onDragOut (this);
+            return;
+        }
+        juce::Button::mouseDrag (e);
+    }
+
+    void mouseUp (const juce::MouseEvent& e) override
+    {
+        if (dragStarted)
+        {
+            // Letting go at the end of a drag must not also fire the click.
+            dragStarted = false;
+            setState (buttonNormal);
+            wake();
+            return;
+        }
+        juce::Button::mouseUp (e);
+    }
+
 protected:
     HoverGlow glow;
+    bool dragStarted = false;
     juce::Colour accent { tokens::accentRed };
 
 private:

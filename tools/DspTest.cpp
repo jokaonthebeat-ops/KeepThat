@@ -804,6 +804,68 @@ static void collectButtons (juce::Component& c, juce::Array<juce::Button*>& out)
     }
 }
 
+static void testDragIsAHoldGesture()
+{
+    std::printf ("\nDRAG TO DAW is a drag, not a click\n");
+
+    KeepThatProcessor processor;
+    processor.setPlayConfigDetails (2, 2, kRate, 512);
+    processor.prepareToPlay (kRate, 512);
+    PlaceholderData::populate (processor.session());
+
+    std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
+    if (editor == nullptr) { check (false, "editor created"); return; }
+    editor->setSize (Design::width, Design::height);
+
+    juce::Array<juce::Button*> buttons;
+    collectButtons (*editor, buttons);
+
+    keepthat::AnimatedButton* drag = nullptr;
+    for (auto* b : buttons)
+        if (b->getName() == "DRAG TO DAW")
+            drag = dynamic_cast<keepthat::AnimatedButton*> (b);
+
+    check (drag != nullptr, "the DRAG TO DAW button exists");
+    if (drag == nullptr)
+        return;
+
+    // The gesture must hang off the DRAG hook. Hanging it off onClick means it
+    // starts on mouse-UP, after the user has let go of the thing.
+    check (drag->onDragOut != nullptr, "the drag is wired to press-and-move");
+
+    bool dragged = false, clicked = false;
+    drag->onDragOut = [&dragged] (juce::Component*) { dragged = true; };
+    drag->onClick   = [&clicked] { clicked = true; };
+
+    auto src = juce::Desktop::getInstance().getMainMouseSource();
+    const auto down = juce::Point<float> (10.0f, 10.0f);
+    const auto away = juce::Point<float> (60.0f, 40.0f);
+    const auto now  = juce::Time::getCurrentTime();
+
+    juce::MouseEvent press (src, down, {}, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                            drag, drag, now, down, now, 1, false);
+    drag->mouseDown (press);
+    check (! dragged, "pressing alone does not start a drag");
+
+    juce::MouseEvent moved (src, away, {}, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                            drag, drag, now, down, now, 1, false);
+    drag->mouseDrag (moved);
+    check (dragged, "holding and moving DOES start the drag");
+
+    juce::MouseEvent release (src, away, {}, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                              drag, drag, now, down, now, 1, false);
+    drag->mouseUp (release);
+    check (! clicked, "finishing a drag does not also fire a click");
+
+    // A press with no movement is still an ordinary click, so the hint fires.
+    dragged = clicked = false;
+    drag->mouseDown (press);
+    juce::MouseEvent tiny (src, juce::Point<float> (12.0f, 11.0f), {}, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                           drag, drag, now, down, now, 1, false);
+    drag->mouseDrag (tiny);
+    check (! dragged, "a two-pixel wobble is not a drag");
+}
+
 static void testEveryButtonIsWired()
 {
     std::printf ("\nbutton wiring\n");
@@ -926,6 +988,7 @@ int main()
     testExport();
     testProcessorCapture();
     testEveryButtonIsWired();
+    testDragIsAHoldGesture();
     testNoAllocationInProcessBlock();
 
     std::printf ("\n---------------------------------\n");
